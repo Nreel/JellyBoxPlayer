@@ -43,7 +43,7 @@ class JellyboxCloudSettings extends ConsumerWidget {
           style: _buttonStyle,
           icon: Icon(account == null ? Icons.cloud_outlined : Icons.cloud_done),
           label: Text(
-            account == null ? 'Connect' : 'Connected as ${account.email}',
+            account == null ? 'Connect' : 'Connected as ${account.login}',
           ),
         ),
         const _ServerConnectionRow(),

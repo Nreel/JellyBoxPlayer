@@ -340,7 +340,7 @@ void main() {
         cloud: const CloudState(
           account: ContinuityAccount(
             serverUrl: 'https://cloud.example',
-            email: 'alex@example.com',
+            login: 'alex@example.com',
             userId: 'u',
             token: 't',
           ),

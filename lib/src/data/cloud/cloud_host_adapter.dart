@@ -3,20 +3,20 @@ import 'dart:io' show Platform;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:optional_features/jellybox_cloud.dart';
 import 'package:jplayer/main.dart' as app show deviceId;
 import 'package:jplayer/src/data/providers/providers.dart';
 import 'package:jplayer/src/domain/models/models.dart';
 import 'package:jplayer/src/domain/playback/playback_target.dart';
 import 'package:jplayer/src/domain/playback/playback_target_provider.dart';
-import 'package:jplayer/src/domain/providers/current_user_provider.dart';
 import 'package:jplayer/src/domain/providers/app_settings_provider.dart';
+import 'package:jplayer/src/domain/providers/current_user_provider.dart';
 import 'package:jplayer/src/domain/providers/playback_provider.dart';
 import 'package:jplayer/src/domain/providers/system_volume_provider.dart';
 import 'package:jplayer/src/domain/providers/volume_provider.dart';
 import 'package:jplayer/src/providers/current_server_id_provider.dart';
 import 'package:jplayer/src/providers/player_provider.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:optional_features/jellybox_cloud.dart';
 
 String continuityDeviceName() {
   if (kIsWeb) return 'Browser';
@@ -222,12 +222,13 @@ class CloudHostAdapter implements CloudHost<LibraryItem> {
   Future<void> skipTo(int index) =>
       _ref.read(playbackProvider.notifier).skipTo(index, autoPlay: true);
 
+  /// Another device took the session over, so this device must go quiet.
+  ///
+  /// The queue is kept (it is the session's queue, mirrored from the server),
+  /// but nothing may keep playing here: switching targets would restart the
+  /// same queue locally and play it twice.
   @override
-  Future<void> releaseOutput() async {
-    final playback = _ref.read(playbackProvider.notifier);
-    if (playback.target.kind == PlaybackTargetKind.local) return;
-    await playback.switchTarget(_ref.read(localPlaybackTargetProvider));
-  }
+  Future<void> releaseOutput() => _ref.read(playbackProvider.notifier).stop();
 
   @override
   bool get rendersLocally =>
