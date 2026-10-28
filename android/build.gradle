@@ -7,7 +7,14 @@ allprojects {
 
 rootProject.buildDir = '../build'
 subprojects {
-    project.buildDir = "${rootProject.buildDir}/${project.name}"
+    // Flutter's plugin projects live in the pub cache. When that cache is on a
+    // different Windows drive than this project, moving their build directory
+    // under ../build makes Gradle unable to resolve relative paths between the
+    // build output and the plugin sources. Keep those projects' default
+    // build directory next to their sources instead.
+    if (project.projectDir.toPath().root == rootProject.projectDir.toPath().root) {
+        project.buildDir = "${rootProject.buildDir}/${project.name}"
+    }
 }
 subprojects {
     project.evaluationDependsOn(':app')
