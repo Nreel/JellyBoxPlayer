@@ -33,7 +33,15 @@ dependencies:
   # See packages/just_audio_background/CHANGELOG.md.
   just_audio_background:
     path: ./packages/just_audio_background
-  just_audio_media_kit: any
+  # Vendored fork of just_audio_media_kit 2.1.0 with a patched
+  # concatenatingInsertAll: the upstream move() used `length` (one past the
+  # last item) as the source index, so every mid-sequence insert - forward
+  # cache adoption and "play next" - left the audio at the playlist end while
+  # the app's queue placed it at the requested index, giving the playing track
+  # another song's title/cover/duration. See
+  # packages/just_audio_media_kit/CHANGELOG.md.
+  just_audio_media_kit:
+    path: ./packages/just_audio_media_kit
   audio_session: any
   audio_service_mpris: ^0.1.0
   media_kit_libs_linux: any # Required dependency of just_audio_media_kit for Linux support
