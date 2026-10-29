@@ -129,10 +129,13 @@ void main() {
     expect(log, ['switch uuid:kef']);
   });
 
-  test('handing off while casting releases the speaker', () async {
+  test('handing off while casting leaves playback to the cloud handoff',
+      () async {
     await controllerWith(current: kef).handOffTo(_iphone);
 
-    expect(log, ['handoff iphone', 'switch local']);
+    // The cloud stops this device when the target accepts, so a rejected
+    // request does not interrupt playback here.
+    expect(log, ['handoff iphone']);
   });
 
   test('a handoff that fails keeps the speaker', () async {

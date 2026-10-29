@@ -30,10 +30,10 @@ class OutputController {
   }
 
   Future<bool> handOffTo(ConductorDevice device) async {
-    final taken = await _ref.read(cloudProvider.notifier).handoffTo(device.id);
-    if (taken && _playback.target.kind != PlaybackTargetKind.local) {
-      await _playback.switchTarget(_ref.read(localPlaybackTargetProvider));
-    }
-    return taken;
+    // The target device continues the session. This device keeps playing
+    // until the server confirms the handoff, so a rejected or unanswered
+    // request does not leave the user with silence. On acceptance the cloud
+    // calls [CloudHost.releaseOutput], which stops this device.
+    return _ref.read(cloudProvider.notifier).handoffTo(device.id);
   }
 }

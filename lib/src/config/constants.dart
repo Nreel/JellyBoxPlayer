@@ -16,7 +16,13 @@ const bool kSideloadBuild = bool.fromEnvironment('JELLYBOX_SIDELOAD');
 
 const String discordApplicationId = '1547587702344388712';
 
-const String jellyboxCloudUrl = 'https://cloud.jellybox.app';
+/// Default continuity server. Override at build time with
+/// `--dart-define=CONTINUITY_URL=http://192.168.1.10:8000`; users can also
+/// change it at runtime from the connect form.
+const String jellyboxCloudUrl = String.fromEnvironment(
+  'CONTINUITY_URL',
+  defaultValue: 'http://localhost:8000',
+);
 const String jellyfinRelayPluginUrl =
     'https://github.com/JellyBoxPlayer/jellyfin-relay';
 

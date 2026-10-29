@@ -1,10 +1,8 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:optional_features/jellybox_cloud.dart';
 import 'package:jplayer/src/config/constants.dart';
 import 'package:jplayer/src/data/cloud/cloud_host_adapter.dart';
 import 'package:jplayer/src/data/providers/providers.dart';
@@ -14,6 +12,7 @@ import 'package:jplayer/src/domain/providers/current_user_provider.dart';
 import 'package:jplayer/src/domain/providers/playback_provider.dart';
 import 'package:jplayer/src/providers/accounts_provider.dart';
 import 'package:jplayer/src/providers/current_server_id_provider.dart';
+import 'package:optional_features/jellybox_cloud.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final conductorUrlProvider =
@@ -25,11 +24,7 @@ final conductorUrlProvider =
 
 class ConductorUrlNotifier extends StateNotifier<String> {
   ConductorUrlNotifier(this._prefs)
-    : super(
-        kDebugMode
-            ? (_prefs?.getString(_key) ?? jellyboxCloudUrl)
-            : jellyboxCloudUrl,
-      );
+    : super(_prefs?.getString(_key) ?? jellyboxCloudUrl);
 
   static const _key = 'conductor_url';
 
@@ -37,9 +32,12 @@ class ConductorUrlNotifier extends StateNotifier<String> {
 
   String get url => state;
 
+  /// The continuity server is a LAN address the user owns, so it is editable in
+  /// every build. The compiled-in default only seeds the first launch.
   set url(String value) {
-    if (!kDebugMode) return;
-    state = value.trim();
+    final next = value.trim();
+    if (next == state) return;
+    state = next;
     final prefs = _prefs;
     if (prefs != null) unawaited(prefs.setString(_key, state));
   }
@@ -60,7 +58,12 @@ class CloudNotifier extends StateNotifier<CloudState> {
     _states = _cloud.states.listen((next) => state = next);
 
     _ref
-      ..listen(conductorUrlProvider, (_, _) => unawaited(_refresh()))
+      ..listen(conductorUrlProvider, (_, _) {
+        // [signIn] updates the preference and the cloud URL together. Letting
+        // refresh also react would close the socket mid-sign-in and make the
+        // first attempt against a new server fail.
+        if (!_signingIn) unawaited(_refresh());
+      })
       ..listen(currentUserProvider, (_, next) {
         if (next == null && _ref.read(accountsProvider).isEmpty) {
           _cloud.forgetAccount();
@@ -84,14 +87,27 @@ class CloudNotifier extends StateNotifier<CloudState> {
   late final StreamSubscription<CloudState> _states;
   StreamSubscription<List<ConnectivityResult>>? _network;
   AppLifecycleListener? _lifecycle;
+  bool _signingIn = false;
 
   bool get available => _cloud.available;
 
   Future<bool> signIn({
     required String address,
-    required String email,
+    required String login,
     required String password,
-  }) => _cloud.signIn(address: address, email: email, password: password);
+  }) async {
+    _signingIn = true;
+    try {
+      _ref.read(conductorUrlProvider.notifier).url = address;
+      return await _cloud.signIn(
+        address: address,
+        login: login,
+        password: password,
+      );
+    } finally {
+      _signingIn = false;
+    }
+  }
 
   Future<void> signOut() => _cloud.signOut();
 
@@ -139,50 +155,69 @@ class CloudNotifier extends StateNotifier<CloudState> {
   Future<void> _refresh() => _cloud.refresh(benchUrl: _benchUrl());
 
   String? _benchUrl() {
-    if (!kDebugMode) return null;
-    final url = _ref.read(conductorUrlProvider);
-    return url.isEmpty || url == jellyboxCloudUrl ? null : url;
+    final url = _ref.read(conductorUrlProvider).trim();
+    return url.isEmpty ? null : url;
   }
 }
 
+/// Forwards playback intents to the device that owns the session.
+///
+/// Every method declines (`false`) unless another device is actually the
+/// renderer, so `PlaybackNotifier` falls back to playing locally. Without that
+/// gate a local play would be forwarded back into the local player.
 class _RemotePlayback implements RemotePlayback {
   _RemotePlayback(this._cloud);
 
   final JellyboxCloud<LibraryItem> _cloud;
 
-  @override
-  Future<bool> play(PlayRequest request) => _cloud.playOnRenderer(
-    itemIds: request.itemIds,
-    index: request.index,
-    albumId: request.album.id,
-    sourceId: request.sourceId,
-  );
+  bool get _elsewhere => _cloud.hasRemoteRenderer;
 
   @override
-  Future<bool> enqueue(List<LibraryItem> songs, {required bool playNext}) =>
-      _cloud.enqueueOnRenderer(
-        itemIds: [for (final song in songs) song.id],
-        playNext: playNext,
-      );
+  Future<bool> play(PlayRequest request) async {
+    if (!_elsewhere) return false;
+    return _cloud.playOnRenderer(
+      itemIds: request.itemIds,
+      index: request.index,
+      albumId: request.album.id,
+      sourceId: request.sourceId,
+    );
+  }
+
+  @override
+  Future<bool> enqueue(List<LibraryItem> songs, {required bool playNext}) {
+    if (!_elsewhere) return Future.value(false);
+    return _cloud.enqueueOnRenderer(
+      itemIds: [for (final song in songs) song.id],
+      playNext: playNext,
+    );
+  }
 
   @override
   Future<bool> replaceUpcoming(
     List<LibraryItem> songs,
     LibraryItem album, {
     String? sourceId,
-  }) => _cloud.replaceUpcomingOnRenderer(
-    itemIds: [for (final song in songs) song.id],
-    albumId: album.id,
-    sourceId: sourceId,
-  );
+  }) {
+    if (!_elsewhere) return Future.value(false);
+    return _cloud.replaceUpcomingOnRenderer(
+      itemIds: [for (final song in songs) song.id],
+      albumId: album.id,
+      sourceId: sourceId,
+    );
+  }
 
   @override
-  Future<bool> move(int from, int to) => _cloud.moveOnRenderer(from, to);
+  Future<bool> move(int from, int to) async =>
+      _elsewhere && await _cloud.moveOnRenderer(from, to);
 
   @override
-  Future<bool> remove(int index) => _cloud.removeOnRenderer(index);
+  Future<bool> remove(int index) async =>
+      _elsewhere && await _cloud.removeOnRenderer(index);
 }
 
+/// Whether this build ships continuity. It stays true while the server is
+/// unreachable, otherwise the settings section that lets the user fix the
+/// server address would disappear exactly when it is needed.
 final cloudAvailableProvider = Provider<bool>(
   (ref) => ref.watch(cloudProvider.notifier).available,
 );

@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+.venv-win/
+.pytest_cache/
+continuity.db
+continuity.db-*
+data/
+test_*.py
+README.md

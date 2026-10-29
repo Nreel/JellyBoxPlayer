@@ -1,13 +1,11 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:optional_features/jellybox_cloud.dart';
 import 'package:jplayer/src/domain/providers/cloud_provider.dart';
 import 'package:jplayer/src/presentation/widgets/form_modal.dart';
 import 'package:jplayer/src/presentation/widgets/labeled_text_field.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:optional_features/jellybox_cloud.dart';
 
 class JellyboxCloudConnectForm extends ConsumerStatefulWidget {
   const JellyboxCloudConnectForm({
@@ -24,7 +22,7 @@ class JellyboxCloudConnectForm extends ConsumerStatefulWidget {
 
 class _JellyboxCloudConnectFormState
     extends ConsumerState<JellyboxCloudConnectForm> {
-  final _email = TextEditingController();
+  final _login = TextEditingController();
   final _password = TextEditingController();
   late final TextEditingController _address;
   var _submitting = false;
@@ -37,7 +35,7 @@ class _JellyboxCloudConnectFormState
 
   @override
   void dispose() {
-    _email.dispose();
+    _login.dispose();
     _password.dispose();
     _address.dispose();
     super.dispose();
@@ -47,13 +45,11 @@ class _JellyboxCloudConnectFormState
     if (_submitting) return;
     setState(() => _submitting = true);
 
-    if (kDebugMode) ref.read(conductorUrlProvider.notifier).url = _address.text;
-
     final connected = await ref
         .read(cloudProvider.notifier)
         .signIn(
-          address: kDebugMode ? _address.text : ref.read(conductorUrlProvider),
-          email: _email.text,
+          address: _address.text.trim(),
+          login: _login.text,
           password: _password.text,
         );
     if (!mounted) return;
@@ -62,19 +58,6 @@ class _JellyboxCloudConnectFormState
       return;
     }
     setState(() => _submitting = false);
-  }
-
-  Future<void> _forgotPassword() async {
-    final cloud = Uri.parse(
-      kDebugMode ? _address.text : ref.read(conductorUrlProvider),
-    );
-    await launchUrl(
-      cloud.replace(
-        path: '/users/reset-password',
-        queryParameters: {if (_email.text.isNotEmpty) 'email': _email.text},
-      ),
-      mode: LaunchMode.externalApplication,
-    );
   }
 
   Future<void> _disconnect() async {
@@ -101,7 +84,7 @@ class _JellyboxCloudConnectFormState
 
           if (account != null && !_submitting) ...[
             Text(
-              'Connected as ${account.email}',
+              'Connected as ${account.login}',
               style: TextStyle(color: muted),
             ),
             if (_connectionError(ref) case final error?)
@@ -133,29 +116,22 @@ class _JellyboxCloudConnectFormState
             ),
           ] else ...[
             Text(
-              'Sign in to play across your devices - start on one, '
-              'carry on with another.',
+              'Connect to your own continuity server to start playback on one '
+              'device and carry on with another.',
               style: TextStyle(fontSize: 14, color: muted),
             ),
             const SizedBox(height: 16),
-            Text(
-              'Hitting connect will either create new account or sign in to existing account.',
-              style: TextStyle(fontSize: 14, color: muted),
-            ),
-            const SizedBox(height: 16),
-            if (kDebugMode) ...[
-              LabeledTextField(
-                controller: _address,
-                label: 'Server',
-                placeholder: '192.168.1.10:4010',
-                keyboardType: TextInputType.url,
-              ),
-              const SizedBox(height: 8),
-            ],
             LabeledTextField(
-              controller: _email,
-              label: 'Email',
-              keyboardType: TextInputType.emailAddress,
+              controller: _address,
+              label: 'Continuity server',
+              placeholder: '192.168.1.10:8000',
+              keyboardType: TextInputType.url,
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: 8),
+            LabeledTextField(
+              controller: _login,
+              label: 'Login',
               autofocus: true,
               textInputAction: TextInputAction.next,
             ),
@@ -165,14 +141,6 @@ class _JellyboxCloudConnectFormState
               label: 'Password',
               obscureText: true,
               textInputAction: TextInputAction.done,
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () => unawaited(_forgotPassword()),
-                style: ModalFormActions.buttonStyle(context),
-                child: const Text('Forgot password?'),
-              ),
             ),
             if (state.error case final error?)
               Padding(

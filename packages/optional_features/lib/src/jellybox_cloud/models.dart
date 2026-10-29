@@ -37,6 +37,7 @@ class SessionDoc {
     this.shuffle = false,
     this.repeat = 'off',
     this.volume = 1,
+    this.sourceId,
   });
 
   final String? backendRef;
@@ -48,6 +49,7 @@ class SessionDoc {
   final bool shuffle;
   final String repeat;
   final double volume;
+  final String? sourceId;
 
   bool get isEmpty => itemIds.isEmpty;
 
@@ -82,7 +84,7 @@ class ConductorDevice {
 class ContinuityAccount {
   const ContinuityAccount({
     required this.serverUrl,
-    required this.email,
+    required this.login,
     required this.userId,
     required this.token,
     this.serverName,
@@ -91,7 +93,7 @@ class ContinuityAccount {
   });
 
   final String serverUrl;
-  final String email;
+  final String login;
   final String userId;
   final String token;
   final String? serverName;
