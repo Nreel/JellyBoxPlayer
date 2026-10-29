@@ -7,16 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:jplayer/resources/j_player_icons.dart';
-import 'package:jplayer/src/config/constants.dart';
-import 'package:jplayer/src/config/routes.dart';
 import 'package:jplayer/src/domain/providers/providers.dart';
-import 'package:jplayer/src/presentation/themes/themes.dart';
 import 'package:jplayer/src/presentation/utils/utils.dart';
 import 'package:jplayer/src/presentation/widgets/widgets.dart';
 import 'package:jplayer/src/providers/auth_provider.dart';
 import 'package:jplayer/src/providers/connectivity_provider.dart';
 import 'package:jplayer/src/providers/server_addresses_provider.dart';
-import 'package:updatify_flutter/updatify_flutter.dart';
 
 class MainPage extends ConsumerStatefulWidget {
   const MainPage({
@@ -54,23 +50,6 @@ class _MainPageState extends ConsumerState<MainPage> {
     );
   }
 
-  Widget _supportButton(bool collapsed) {
-    final button = RailItemButton(
-      onPressed: () => context.pushNamed(Routes.support.name),
-      icon: const Icon(Icons.help_outline),
-      label: const Text('Support'),
-      foregroundColor: _theme.colorScheme.onPrimary,
-      fontSize: 16,
-      horizontalPadding: 30,
-    );
-
-    return RailTooltip(
-      message: 'Support',
-      enabled: collapsed,
-      child: button,
-    );
-  }
-
   Widget _logoutButton(bool collapsed) {
     final button = RailItemButton(
       onPressed: ref.read(authProvider.notifier).logout,
@@ -97,34 +76,10 @@ class _MainPageState extends ConsumerState<MainPage> {
   }
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => unawaited(_maybeShowUpdates()),
-    );
-  }
-
-  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _theme = Theme.of(context);
     _device = DeviceType.fromScreenSize(MediaQuery.sizeOf(context));
-  }
-
-  Future<void> _maybeShowUpdates() async {
-    if (!mounted) return;
-    final isDesktop = _device.isDesktop;
-    await maybeShowUpdatifyPopup(
-      context,
-      projectId: updatifyProjectId,
-      popupType: isDesktop
-          ? UpdatifyPopupType.modal
-          : UpdatifyPopupType.bottomSheet,
-      backgroundColor: Themes.changelogSurface,
-      title: changelogTitle,
-      borderRadius: BorderRadius.circular(8),
-      width: isDesktop ? MediaQuery.sizeOf(context).width / 2 : null,
-    );
   }
 
   Future<void> _requestReview() async {
@@ -191,10 +146,7 @@ class _MainPageState extends ConsumerState<MainPage> {
                   trailing: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _supportButton(sidebarCollapsed),
-                      _logoutButton(sidebarCollapsed),
-                    ],
+                    children: [_logoutButton(sidebarCollapsed)],
                   ),
                   selectedIndex: currentIndex,
                   onDestinationSelected: _navigateToItem,

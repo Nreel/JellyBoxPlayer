@@ -959,11 +959,6 @@ class _BrowsePageState extends ConsumerState<BrowsePage>
       _filterButton(),
       const SizedBox(width: 12),
       LibrarySelectorButton(size: _device.isMobile ? 32 : 40),
-      const SizedBox(width: 12),
-      UpdatifyBell(
-        isDesktop: _device.isDesktop,
-        iconSize: _device.isDesktop ? 24 : 28,
-      ),
     ],
   );
 
@@ -983,7 +978,6 @@ class _BrowsePageState extends ConsumerState<BrowsePage>
             _revealFromBell(slotsFromBell: 3, child: _searchButton()),
             _revealFromBell(slotsFromBell: 2, child: _layoutButton()),
             _revealFromBell(slotsFromBell: 1, child: _filterButton()),
-            UpdatifyBell(isDesktop: _device.isDesktop),
           ],
         ),
       ),

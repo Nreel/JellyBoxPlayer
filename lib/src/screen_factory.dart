@@ -228,13 +228,4 @@ class ScreenFactory {
       child: SettingsPage(),
     );
   }
-
-  Page<void> supportPage(
-    BuildContext context,
-    GoRouterState router,
-  ) {
-    return const CupertinoPage(
-      child: SupportPage(),
-    );
-  }
 }

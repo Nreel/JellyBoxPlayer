@@ -78,6 +78,5 @@ export 'sort_menu_button.dart';
 export 'studio_mode.dart';
 export 'swipeable_artwork.dart';
 export 'update_banner.dart';
-export 'updatify_bell.dart';
 export 'volume_control.dart';
 export 'rating_stars.dart';

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -7,20 +5,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:jplayer/main.dart';
 import 'package:jplayer/resources/j_player_icons.dart';
-import 'package:jplayer/src/config/constants.dart';
 import 'package:jplayer/src/config/routes.dart';
 import 'package:jplayer/src/core/discord/discord_presence_handler.dart';
 import 'package:jplayer/src/core/enums/enums.dart';
 import 'package:jplayer/src/data/services/artwork_cache.dart';
 import 'package:jplayer/src/domain/providers/cloud_provider.dart';
 import 'package:jplayer/src/domain/providers/providers.dart';
-import 'package:jplayer/src/presentation/themes/themes.dart';
 import 'package:jplayer/src/presentation/utils/utils.dart';
 import 'package:jplayer/src/presentation/widgets/widgets.dart';
 import 'package:jplayer/src/providers/accounts_provider.dart';
 import 'package:jplayer/src/providers/auth_provider.dart';
 import 'package:jplayer/src/providers/network_type_provider.dart';
-import 'package:updatify_flutter/updatify_flutter.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -113,31 +108,6 @@ class SettingsPage extends ConsumerWidget {
   void _onPaletteSettingsPressed(BuildContext context) =>
       context.pushNamed(Routes.palette.name);
 
-  void _onChangelogPressed(BuildContext context, DeviceType device) {
-    if (device.isDesktop) {
-      unawaited(
-        showUpdatifyDialog(
-          context,
-          projectId: updatifyProjectId,
-          backgroundColor: Themes.changelogSurface,
-          borderRadius: BorderRadius.circular(8),
-          width: MediaQuery.sizeOf(context).width / 2,
-          title: changelogTitle,
-        ),
-      );
-    } else {
-      unawaited(
-        showUpdatifyBottomSheet(
-          context,
-          projectId: updatifyProjectId,
-          backgroundColor: Themes.changelogSurface,
-          borderRadius: BorderRadius.circular(8),
-          title: changelogTitle,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final padding = MediaQuery.paddingOf(context);
@@ -183,10 +153,6 @@ class SettingsPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 4,
                   children: [
-                    if (!device.isDesktop) ...[
-                      const SizedBox(height: 4),
-                      _supportButton(context),
-                    ],
                     _sectionHeader('Servers'),
                     const ServerAccountList(),
                     _sectionHeader('Connection'),
@@ -198,7 +164,6 @@ class SettingsPage extends ConsumerWidget {
                     _sectionHeader('General'),
                     if (kDebugMode) _settingsButton(context),
                     if (kDebugMode) _queueCacheButton(context),
-                    _changelogButton(context, device),
                     _sectionHeader('Home Page'),
                     _settingCheckbox(
                       ref: ref,
@@ -585,22 +550,6 @@ class SettingsPage extends ConsumerWidget {
     icon: const Icon(JPlayer.music),
     label: const Text('Palette settings'),
   );
-
-  Widget _supportButton(BuildContext context) => TextButton.icon(
-    onPressed: () => context.pushNamed(Routes.support.name),
-    style: _buttonStyle,
-    icon: const Icon(Icons.help_outline),
-    label: const Text('Support'),
-  );
-
-  Widget _changelogButton(BuildContext context, DeviceType device) {
-    return TextButton.icon(
-      onPressed: () => _onChangelogPressed(context, device),
-      style: _buttonStyle,
-      icon: const Icon(Icons.history),
-      label: const Text('Changelog'),
-    );
-  }
 
   Widget _refreshContentButton(BuildContext context, WidgetRef ref) =>
       IconButton(

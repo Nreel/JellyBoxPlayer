@@ -157,7 +157,6 @@ JellyBox is a music client for [Jellyfin](https://jellyfin.org), [Emby](https://
 - [x] AirPlay and system output routing on macOS and iOS
 - [x] Cast to DLNA / UPnP renderers (smart TVs, network speakers and receivers)
 - [x] Lock screen and notification controls on iOS and Android
-- [x] In-app changelog, so you can see what landed in each release
 - [x] Apple CarPlay - currently in beta stage.
 - [x] Android Auto - currently in beta stage.
 

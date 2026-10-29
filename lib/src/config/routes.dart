@@ -14,7 +14,6 @@ enum Routes {
   genre('genre'),
   palette('palette'),
   queueCache('queue-cache'),
-  support('support'),
   searchResults('search-results'),
   playlist('playlist'),
   favourites('favourites'),
