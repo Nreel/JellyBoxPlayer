@@ -177,7 +177,6 @@ void main() {
       failure?.message,
       contains('LSX II LT is now playing something else'),
     );
-    expect(failure?.message, isNot(contains('error report')));
   });
 
   test('- falls back once, however many errors the device emits', () async {

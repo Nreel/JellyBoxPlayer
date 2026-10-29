@@ -52,8 +52,7 @@ enum AppSetting {
   contentUpdateInterval('content_update_interval', defaultValue: 'min5'),
   rendererVolumes('renderer_volumes', defaultValue: <String, double>{}),
   listenBrainzUser('listenbrainz_user', defaultValue: ''),
-  listenBrainzApiUrl('listenbrainz_api_url', defaultValue: ''),
-  telemetryOptOut('telemetry_opt_out');
+  listenBrainzApiUrl('listenbrainz_api_url', defaultValue: '');
 
   const AppSetting(this.key, {this.defaultValue = false, this.syncs = true});
 

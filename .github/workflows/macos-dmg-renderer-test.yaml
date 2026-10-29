@@ -63,8 +63,8 @@ jobs:
         run: |
           # The run number is useless as a build number here: it restarts when
           # the workflow file is renamed and produced builds like 2.10.0+2 that
-          # are impossible to tell apart from release builds in Sentry. The
-          # pubspec build number at least identifies the commit range.
+          # are impossible to tell apart from release builds. The pubspec build
+          # number at least identifies the commit range.
           PUBSPEC="$(grep -m1 '^version:' pubspec.yaml | awk '{print $2}')"
           VERSION="${IN_VERSION:-${PUBSPEC%%+*}}"
           BUILD_NUMBER="${IN_BUILD_NUMBER:-${PUBSPEC#*+}}"

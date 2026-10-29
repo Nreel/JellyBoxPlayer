@@ -10,7 +10,6 @@ import 'package:jplayer/src/core/upnp/upnp_renderer.dart';
 import 'package:jplayer/src/core/upnp/upnp_soap_client.dart';
 import 'package:optional_features/jellybox_cloud.dart';
 import 'package:optional_features/upnp_quirks.dart';
-import 'package:jplayer/src/core/diagnostics/diagnostics.dart';
 import 'package:jplayer/src/domain/playback/control_point_host_provider.dart';
 import 'package:jplayer/src/domain/playback/output_controller.dart';
 import 'package:jplayer/src/domain/playback/playback_target.dart';
@@ -23,7 +22,6 @@ import 'package:jplayer/src/domain/providers/upnp_renderers_provider.dart';
 import 'package:jplayer/src/presentation/widgets/jellybox_cloud_connect_form.dart';
 import 'package:jplayer/src/presentation/widgets/playback_target_picker.dart';
 import 'package:jplayer/src/presentation/widgets/volume_control.dart';
-import 'package:jplayer/src/providers/diagnostics_provider.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:native_route_picker/native_route_picker.dart';
 
@@ -64,20 +62,6 @@ class _FakeCastNotifier extends CastDevicesNotifier {
 
   @override
   void refresh() {}
-}
-
-class _RecordingDiagnostics extends Diagnostics {
-  const _RecordingDiagnostics(this.reports);
-
-  final List<({String message, Map<String, Object?> data})> reports;
-
-  @override
-  Future<void> report(
-    String message, {
-    Map<String, Object?> data = const {},
-  }) async {
-    reports.add((message: message, data: data));
-  }
 }
 
 class _FakeQueue implements DeviceQueue {
@@ -814,142 +798,6 @@ void main() {
     expect(find.text('10.0.0.11 · Play:5'), findsOneWidget);
     expect(find.text('10.0.0.12 · Play:5'), findsOneWidget);
     expect(find.text('10.0.0.13 · Play:5'), findsOneWidget);
-  });
-
-  group('sharing the device list', () {
-    late List<({String message, Map<String, Object?> data})> reports;
-
-    Future<void> pumpSharablePicker(WidgetTester tester) async {
-      reports = [];
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            upnpRenderersProvider.overrideWith(
-              (ref) => _FakeRenderersNotifier([
-                rendererNamed(
-                  "Alex's Bedroom",
-                  model: 'Play:5',
-                  host: '10.0.0.11',
-                  manufacturer: 'Sonos, Inc.',
-                ),
-              ]),
-            ),
-            diagnosticsProvider.overrideWithValue(
-              _RecordingDiagnostics(reports),
-            ),
-          ],
-          child: MaterialApp(
-            home: Scaffold(body: PlaybackTargetMenu(onDone: () {})),
-          ),
-        ),
-      );
-      await tester.pump();
-    }
-
-    testWidgets('- offers an upload button once devices are found', (
-      tester,
-    ) async {
-      await pumpSharablePicker(tester);
-
-      final button = tester.widget<IconButton>(
-        find.ancestor(
-          of: find.byIcon(Icons.upload),
-          matching: find.byType(IconButton),
-        ),
-      );
-      expect(button.onPressed, isNotNull);
-    });
-
-    testWidgets('- shows the upload button disabled with nothing to share', (
-      tester,
-    ) async {
-      await pumpPicker(tester, renderers: const []);
-
-      expect(find.byIcon(Icons.upload), findsOneWidget);
-      final button = tester.widget<IconButton>(
-        find.ancestor(
-          of: find.byIcon(Icons.upload),
-          matching: find.byType(IconButton),
-        ),
-      );
-      expect(button.onPressed, isNull);
-    });
-
-    testWidgets('- sends nothing until the user confirms', (tester) async {
-      await pumpSharablePicker(tester);
-
-      await tester.tap(find.byIcon(Icons.upload));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Share what JellyBox found?'), findsOneWidget);
-      expect(reports, isEmpty);
-
-      await tester.tap(find.text('Not now'));
-      await tester.pumpAndSettle();
-
-      expect(reports, isEmpty);
-    });
-
-    testWidgets('- reports every device under one message on confirm', (
-      tester,
-    ) async {
-      await pumpSharablePicker(tester);
-
-      await tester.tap(find.byIcon(Icons.upload));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Share'));
-      await tester.pumpAndSettle();
-
-      expect(reports, hasLength(1));
-      expect(reports.single.message, 'upnp device report');
-
-      final devices = (reports.single.data['devices']! as List)
-          .cast<Map<String, Object?>>();
-      expect(devices, hasLength(1));
-      expect(devices.single['manufacturer'], 'Sonos, Inc.');
-      expect(devices.single['modelName'], 'Play:5');
-      expect(devices.single['hasFriendlyName'], isTrue);
-      expect(devices.single.containsKey('friendlyName'), isFalse);
-      expect(devices.single.containsKey('host'), isFalse);
-      expect(
-        devices.single['actions'],
-        containsPair('SetAVTransportURI', true),
-      );
-      expect(
-        devices.single['sinkMimeTypes'],
-        containsPair('audio/mpeg', true),
-      );
-      expect(devices.single['queue'], 'sonos');
-      expect(devices.single['quirks'], isA<Map<String, Object?>>());
-    });
-
-    testWidgets('- asks plainly, without listing the devices', (tester) async {
-      await pumpSharablePicker(tester);
-
-      await tester.tap(find.byIcon(Icons.upload));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Share what JellyBox found?'), findsOneWidget);
-      expect(find.textContaining('stays private'), findsOneWidget);
-      expect(
-        find.textContaining('support for different manufacturers'),
-        findsOneWidget,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(AlertDialog),
-          matching: find.textContaining('Sonos'),
-        ),
-        findsNothing,
-      );
-      expect(
-        find.descendant(
-          of: find.byType(AlertDialog),
-          matching: find.textContaining('transport actions'),
-        ),
-        findsNothing,
-      );
-    });
   });
 
   testWidgets('- greys out a queueless renderer on a phone', (tester) async {

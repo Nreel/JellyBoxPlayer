@@ -31,7 +31,7 @@ Android builds use the versions pinned in `android/settings.gradle` and
 plugin working on AGP 9. AGP 10 removes both flags and the legacy DSL, so the
 app must move to the modern DSL and Built-in Kotlin before that upgrade lands;
 plugins that still apply the Kotlin Gradle plugin (audio_session, flutter_udid,
-flutter_volume_controller, in_app_review, sentry_flutter,
+flutter_volume_controller, in_app_review,
 shared_preferences_android, and the vendored flutter_chrome_cast /
 home_screen_widgets modules) need Built-in Kotlin support first.
 

@@ -49,7 +49,6 @@ As this is a solo-maintained open-source project, response times may occasionall
 - Handling and storage of Jellyfin server credentials and access tokens on-device
 - Network communication between JellyBox and a Jellyfin server (e.g. TLS handling, certificate validation)
 - Vulnerabilities in the bundled native components in this repository (`mediakeys_proxy`, `native_route_picker`, the vendored `just_audio_background` and `just_audio_media_kit` packages)
-- Crash-reporting/telemetry data handling (Sentry integration)
 
 ### Out of scope
 

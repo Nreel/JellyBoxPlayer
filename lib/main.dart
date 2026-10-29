@@ -25,7 +25,6 @@ import 'package:jplayer/src/core/downloads/download_paths.dart';
 import 'package:jplayer/src/core/errors/image_error_filter.dart';
 import 'package:jplayer/src/core/network/certificate_trust.dart';
 import 'package:jplayer/src/core/smtc/smtc_handler.dart';
-import 'package:jplayer/src/core/telemetry/telemetry.dart';
 import 'package:jplayer/src/data/storages/download_database.dart';
 import 'package:jplayer/src/data/storages/window_placement_storage.dart';
 import 'package:jplayer/src/domain/providers/cloud_provider.dart';
@@ -39,7 +38,6 @@ import 'package:just_audio_media_kit/just_audio_media_kit.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:responsive_builder/responsive_builder.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:video_player_media_kit/video_player_media_kit.dart';
 import 'package:window_manager/window_manager.dart';
@@ -53,7 +51,7 @@ Future<void> main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
-  SentryWidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized();
 
   if (Platform.isLinux || Platform.isWindows) {
     DownloadDatabase.databaseDirectory =
@@ -131,7 +129,6 @@ Future<void> main() async {
         ),
     ],
   );
-  Telemetry.watch(container);
   final carContent = CarContent(container);
   if (Platform.isIOS) CarPlayHandler.initialize(container, carContent);
   if (Platform.isAndroid) AndroidAutoHandler.initialize(container, carContent);
@@ -206,13 +203,10 @@ Future<void> main() async {
     ],
   );
 
-  await Telemetry.start(
-    optedOut: Telemetry.optedOutIn(prefs),
-    appRunner: () => runApp(
-      UncontrolledProviderScope(
-        container: container,
-        child: const App(screenFactory: ScreenFactory()),
-      ),
+  runApp(
+    UncontrolledProviderScope(
+      container: container,
+      child: const App(screenFactory: ScreenFactory()),
     ),
   );
 

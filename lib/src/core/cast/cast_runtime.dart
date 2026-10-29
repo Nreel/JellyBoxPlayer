@@ -23,6 +23,7 @@ Future<void> initializeCast() async {
                     GoogleCastDiscoveryCriteria.kDefaultApplicationId,
                   ),
                   disableDiscoveryAutostart: true,
+                  disableAnalyticsLogging: true,
                   startDiscoveryAfterFirstTapOnCastButton: false,
                 )
               : GoogleCastOptionsAndroid(

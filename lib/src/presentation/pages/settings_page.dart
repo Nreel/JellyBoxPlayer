@@ -429,18 +429,6 @@ class SettingsPage extends ConsumerWidget {
                       'When your server has no lyrics for a song, looks '
                       'them up on lrclib.net, a free public lyrics library.',
                     ),
-                    _sectionHeader('Privacy'),
-                    _settingCheckbox(
-                      ref: ref,
-                      setting: AppSetting.telemetryOptOut,
-                      label: 'Opt out of analytics and crash reports',
-                    ),
-                    _settingNote(
-                      context,
-                      'Jellybox counts app launches and sends crash reports to '
-                      'help fix bugs. Nothing about your library or listening '
-                      'is collected.',
-                    ),
                     if (!device.isDesktop) _logOutButton(ref),
                     _versionLabel(context),
                   ],

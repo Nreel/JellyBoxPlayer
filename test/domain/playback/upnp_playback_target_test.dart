@@ -9,7 +9,6 @@ import 'package:jplayer/src/core/upnp/upnp_renderer.dart';
 import 'package:jplayer/src/domain/playback/playback_target.dart';
 import 'package:jplayer/src/domain/playback/upnp_playback_target.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:optional_features/upnp_quirks.dart';
 
 class MockAvTransport extends Mock implements AvTransport {}
@@ -25,7 +24,6 @@ class _RecordingDiagnostics extends Diagnostics {
     Object error, {
     required String operation,
     StackTrace? stackTrace,
-    SentryLevel level = SentryLevel.warning,
     Map<String, String> tags = const {},
     Map<String, Object?> extra = const {},
   }) async {
