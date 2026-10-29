@@ -1,19 +1,6 @@
 group 'com.felnanuke.google_cast'
 version '1.0-SNAPSHOT'
 
-buildscript {
-    ext.kotlin_version = '2.1.0'
-    repositories {
-        google()
-        mavenCentral()
-    }
-
-    dependencies {
-        classpath 'com.android.tools.build:gradle:8.6.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
-    }
-}
-
 rootProject.allprojects {
     repositories {
         google()
@@ -21,21 +8,24 @@ rootProject.allprojects {
     }
 }
 
+// AGP and KGP come from the app project's settings.gradle plugin block;
+// pinning a buildscript classpath here would collide with the app's versions.
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
-
 android {
     namespace = "com.felnanuke.google_cast"
-    compileSdk = 35
+    compileSdk = 36
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
-    kotlinOptions {
-        jvmTarget = '11'
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17
+        }
     }
 
     sourceSets {
@@ -43,16 +33,13 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 24
     }
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.mediarouter:mediarouter:1.4.0'
     implementation 'com.google.android.gms:play-services-cast-framework:21.5.0'
     api 'com.google.code.gson:gson:2.10.1'
-
-
 }
