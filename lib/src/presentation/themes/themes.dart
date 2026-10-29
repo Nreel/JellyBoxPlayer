@@ -35,13 +35,13 @@ abstract class Themes {
     ],
   );
 
-  /// Dark, desaturated panel tone of [accent], keeping its hue. Used for
-  /// sheets, bars and chips so surfaces stay tinted toward the accent.
-  static Color _panelTone(
-    Color accent, {
+  /// Dark, desaturated tone of [color], keeping its hue. Used for sheets,
+  /// bars, chips and selected-item pills so surfaces tint toward the accent.
+  static Color tone(
+    Color color, {
     required double saturation,
     required double value,
-  }) => HSVColor.fromColor(accent)
+  }) => HSVColor.fromColor(color)
       .withSaturation(saturation)
       .withValue(value)
       .toColor();
@@ -54,8 +54,8 @@ abstract class Themes {
   static ThemeData withAccent(Color accent) {
     final cached = _cachedTheme;
     if (cached != null && _cachedAccent == accent) return cached;
-    final panel = _panelTone(accent, saturation: 0.56, value: 0.28);
-    final chipBackground = _panelTone(accent, saturation: 0.22, value: 0.21);
+    final panel = tone(accent, saturation: 0.56, value: 0.28);
+    final chipBackground = tone(accent, saturation: 0.22, value: 0.21);
 
     final theme = ThemeData(
       useMaterial3: true,

@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:in_app_review/in_app_review.dart';
 import 'package:jplayer/resources/j_player_icons.dart';
 import 'package:jplayer/src/domain/providers/providers.dart';
+import 'package:jplayer/src/presentation/themes/themes.dart';
 import 'package:jplayer/src/presentation/utils/utils.dart';
 import 'package:jplayer/src/presentation/widgets/widgets.dart';
 import 'package:jplayer/src/providers/connectivity_provider.dart';
@@ -54,7 +55,13 @@ class _MainPageState extends ConsumerState<MainPage> {
       foregroundColor: selected
           ? _theme.colorScheme.primary
           : _theme.colorScheme.onPrimary,
-      backgroundColor: selected ? const Color(0xFF341010) : null,
+      backgroundColor: selected
+          ? Themes.tone(
+              _theme.colorScheme.primary,
+              saturation: 0.69,
+              value: 0.2,
+            )
+          : null,
       fontSize: 16,
       horizontalPadding: 30,
     );
@@ -168,7 +175,11 @@ class _MainPageState extends ConsumerState<MainPage> {
                     (index) => NavigationRailDestination(
                       icon: Icon(_menuItems.elementAt(index).$1),
                       label: Text(_menuItems.elementAt(index).$2),
-                      indicatorColor: const Color(0xFF341010),
+                      indicatorColor: Themes.tone(
+                        _theme.colorScheme.primary,
+                        saturation: 0.69,
+                        value: 0.2,
+                      ),
                       padding: const EdgeInsets.symmetric(
                         vertical: 20,
                         horizontal: 10,
