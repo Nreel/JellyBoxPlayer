@@ -474,26 +474,76 @@ void main() {
   });
 
   group('songs', () {
-    test('- all songs page through search3 in natural order', () async {
-      server.ok('search3', {
-        'searchResult3': {
-          'song': [childJson('s1'), childJson('s2')],
-        },
+    test('- all songs come from a full index sorted by the requested field', () async {
+      server.on('search3', (uri) {
+        final offset = int.parse(uri.queryParameters['songOffset']!);
+        final count = int.parse(uri.queryParameters['songCount']!);
+        final all = [
+          childJson('c', title: 'Cello'),
+          childJson('a', title: 'Anthem'),
+          childJson('b', title: 'Ballad'),
+        ];
+        return subsonicOk({
+          'searchResult3': {'song': all.skip(offset).take(count).toList()},
+        });
       });
 
       final page = await client.getAllSongs(
-        const LibraryQuery(libraryId: '1', startIndex: 200, limit: 2),
+        const LibraryQuery(
+          libraryId: '1',
+          direction: SortDirection.descending,
+          startIndex: 1,
+          limit: 2,
+        ),
       );
 
-      expect(page.items.map((s) => s.id), ['s1', 's2']);
-      expect(page.totalRecordCount, 202);
+      expect(page.totalRecordCount, 3);
+      expect(page.items.map((s) => s.id), ['b', 'a']);
       final uri = server.calls('search3').single;
       expect(uri.queryParameters['query'], '');
-      expect(uri.queryParameters['songCount'], '2');
-      expect(uri.queryParameters['songOffset'], '200');
-      expect(uri.queryParameters['albumCount'], '0');
-      expect(uri.queryParameters['artistCount'], '0');
+      expect(uri.queryParameters['songOffset'], '0');
       expect(uri.queryParameters['musicFolderId'], '1');
+    });
+
+    test('- the song index is fetched once and reused across sorts', () async {
+      server.on('search3', (_) => subsonicOk({
+        'searchResult3': {
+          'song': [
+            {...childJson('old', title: 'Old'), 'created': '2026-01-01T00:00:00Z'},
+            {...childJson('new', title: 'New'), 'created': '2026-06-01T00:00:00Z'},
+            {...childJson('mid', title: 'Mid'), 'created': '2026-03-01T00:00:00Z'},
+          ],
+        },
+      }));
+
+      final byDate = await client.getAllSongs(
+        const LibraryQuery(libraryId: '1', sort: ItemSort.dateCreated),
+      );
+      expect(byDate.items.map((s) => s.id), ['old', 'mid', 'new']);
+
+      final byName = await client.getAllSongs(
+        const LibraryQuery(libraryId: '1'),
+      );
+      expect(byName.items.map((s) => s.id), ['mid', 'new', 'old']);
+      expect(server.calls('search3'), hasLength(1));
+    });
+
+    test('- offset-ignoring servers stop after a duplicate batch', () async {
+      final batch = List.generate(
+        SubsonicClient.songIndexChunk,
+        (i) => childJson('s$i', title: 'T${i.toString().padLeft(3, '0')}'),
+      );
+      server.on('search3', (_) => subsonicOk({
+        'searchResult3': {'song': batch},
+      }));
+
+      final page = await client.getAllSongs(
+        const LibraryQuery(limit: 3),
+      );
+
+      expect(page.totalRecordCount, SubsonicClient.songIndexChunk);
+      expect(server.calls('search3'), hasLength(2));
+      expect(page.items.map((s) => s.id), ['s0', 's1', 's2']);
     });
 
     test('- liked songs can be ordered by when they were liked', () async {

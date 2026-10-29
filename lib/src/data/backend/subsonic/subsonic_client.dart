@@ -53,6 +53,8 @@ class SubsonicClient implements MediaServerClient {
   static const transcodeBitRate = 320;
   static const artistIndexTtl = Duration(seconds: 60);
   static const albumIndexTtl = Duration(minutes: 10);
+  static const songIndexTtl = Duration(minutes: 10);
+  static const songIndexChunk = 500;
   static const extensionRetryInterval = Duration(minutes: 5);
   static const playedAlbumsScanLimit = 25;
   static const genreSetScanLimit = 500;
@@ -81,6 +83,8 @@ class SubsonicClient implements MediaServerClient {
   final _artistIndex =
       <String?, ({DateTime fetchedAt, List<SubsonicArtistDTO> artists})>{};
   final _albumIndex = <String?, _SubsonicAlbumIndex>{};
+  final _songIndex =
+      <String?, ({DateTime fetchedAt, List<SubsonicChildDTO> songs})>{};
   final _startedAt = <String, DateTime>{};
 
   @override
@@ -266,6 +270,35 @@ class SubsonicClient implements MediaServerClient {
     return artists;
   }
 
+  Future<List<SubsonicChildDTO>> _songsIndex(String? libraryId) async {
+    final cached = _songIndex[libraryId];
+    if (cached != null &&
+        _now().difference(cached.fetchedAt) < songIndexTtl) {
+      return cached.songs;
+    }
+    final seen = <String>{};
+    final songs = <SubsonicChildDTO>[];
+    var offset = 0;
+    while (true) {
+      final batch = await _api.search3(
+        query: '',
+        songCount: songIndexChunk,
+        songOffset: offset,
+        musicFolderId: libraryId,
+      );
+      final fresh = [
+        for (final song in batch.song)
+          if (seen.add(song.id)) song,
+      ];
+      if (fresh.isEmpty) break;
+      songs.addAll(fresh);
+      offset += batch.song.length;
+      if (batch.song.length < songIndexChunk) break;
+    }
+    _songIndex[libraryId] = (fetchedAt: _now(), songs: songs);
+    return songs;
+  }
+
   @override
   Future<LibraryPage> getGenres(LibraryQuery query) async {
     final genres = subsonicSortGenres(
@@ -336,16 +369,8 @@ class SubsonicClient implements MediaServerClient {
       return _songPage(songs, query);
     }
 
-    final result = await _api.search3(
-      query: '',
-      songCount: query.limit,
-      songOffset: query.startIndex,
-      musicFolderId: query.libraryId,
-    );
-    return subsonicOpenPage(
-      _songItems(subsonicFilterSongs(result.song, query.filters)),
-      startIndex: query.startIndex,
-    );
+    final songs = await _songsIndex(query.libraryId);
+    return _songPage(songs, query);
   }
 
   @override

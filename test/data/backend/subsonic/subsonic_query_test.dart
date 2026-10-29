@@ -156,6 +156,46 @@ void main() {
       );
     });
 
+    test('- orders songs by date added with missing dates tie-broken by name', () {
+      final songs = [
+        const SubsonicChildDTO(id: 'zeta', title: 'Zeta'),
+        const SubsonicChildDTO(id: 'alpha', title: 'Alpha'),
+        SubsonicChildDTO(
+          id: 'beta',
+          title: 'Beta',
+          created: DateTime.utc(2026, 1, 1),
+        ),
+      ];
+      expect(
+        subsonicSortSongs(songs, ItemSort.dateCreated, SortDirection.ascending)
+            .map((s) => s.id),
+        ['beta', 'alpha', 'zeta'],
+      );
+      expect(
+        subsonicSortSongs(songs, ItemSort.dateCreated, SortDirection.descending)
+            .map((s) => s.id),
+        ['zeta', 'alpha', 'beta'],
+      );
+    });
+
+    test('- orders songs by album artist then name', () {
+      final songs = [
+        const SubsonicChildDTO(id: 'bee', title: 'Bee', artist: 'Zulu'),
+        const SubsonicChildDTO(id: 'alp', title: 'Alp', artist: 'Zulu'),
+        const SubsonicChildDTO(id: 'x', title: 'X', artist: 'Alpha'),
+      ];
+      expect(
+        subsonicSortSongs(songs, ItemSort.albumArtist, SortDirection.ascending)
+            .map((s) => s.id),
+        ['x', 'alp', 'bee'],
+      );
+      expect(
+        subsonicSortSongs(songs, ItemSort.albumArtist, SortDirection.descending)
+            .map((s) => s.id),
+        ['bee', 'alp', 'x'],
+      );
+    });
+
     test('- keeps album order for songs when asked for it', () {
       final songs = [
         const SubsonicChildDTO(id: 'z', title: 'Zed'),

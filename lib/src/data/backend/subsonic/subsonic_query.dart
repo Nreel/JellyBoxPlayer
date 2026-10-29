@@ -203,17 +203,29 @@ Comparator<SubsonicChildDTO>? subsonicSongComparator(ItemSort sort) =>
         a.sortName ?? a.title,
         b.sortName ?? b.title,
       ),
-      ItemSort.albumArtist => (a, b) => subsonicCompareNames(
-        a.displayAlbumArtist ?? a.artist,
-        b.displayAlbumArtist ?? b.artist,
-      ),
-      ItemSort.dateCreated => (a, b) => _compareNullable(a.created, b.created),
+      ItemSort.albumArtist => (a, b) {
+        final byArtist = subsonicCompareNames(
+          a.displayAlbumArtist ?? a.artist,
+          b.displayAlbumArtist ?? b.artist,
+        );
+        if (byArtist != 0) return byArtist;
+        return subsonicCompareNames(a.sortName ?? a.title, b.sortName ?? b.title);
+      },
+      ItemSort.dateCreated => (a, b) {
+        final byDate = _compareNullable(a.created, b.created);
+        if (byDate != 0) return byDate;
+        return subsonicCompareNames(a.sortName ?? a.title, b.sortName ?? b.title);
+      },
       ItemSort.playCount => (a, b) => a.playCount.compareTo(b.playCount),
       ItemSort.datePlayed => (a, b) => _compareNullable(a.played, b.played),
       ItemSort.releaseDate => (a, b) => _compareNullable(a.year, b.year),
-      ItemSort.dateLiked => (a, b) => _compareNullable(
-        subsonicStarredAt(a.starred),
-        subsonicStarredAt(b.starred),
-      ),
+      ItemSort.dateLiked => (a, b) {
+        final byLiked = _compareNullable(
+          subsonicStarredAt(a.starred),
+          subsonicStarredAt(b.starred),
+        );
+        if (byLiked != 0) return byLiked;
+        return subsonicCompareNames(a.sortName ?? a.title, b.sortName ?? b.title);
+      },
       ItemSort.dateLastContentAdded || ItemSort.albumOrder => null,
     };
