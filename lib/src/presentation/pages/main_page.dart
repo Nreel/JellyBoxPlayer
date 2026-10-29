@@ -10,7 +10,6 @@ import 'package:jplayer/resources/j_player_icons.dart';
 import 'package:jplayer/src/domain/providers/providers.dart';
 import 'package:jplayer/src/presentation/utils/utils.dart';
 import 'package:jplayer/src/presentation/widgets/widgets.dart';
-import 'package:jplayer/src/providers/auth_provider.dart';
 import 'package:jplayer/src/providers/connectivity_provider.dart';
 import 'package:jplayer/src/providers/server_addresses_provider.dart';
 
@@ -47,23 +46,6 @@ class _MainPageState extends ConsumerState<MainPage> {
         icon: const Icon(Icons.menu),
         color: _theme.colorScheme.onPrimary,
       ),
-    );
-  }
-
-  Widget _logoutButton(bool collapsed) {
-    final button = RailItemButton(
-      onPressed: ref.read(authProvider.notifier).logout,
-      icon: const Icon(JPlayer.log_out),
-      label: const Text('Log out'),
-      foregroundColor: _theme.colorScheme.onPrimary,
-      fontSize: 16,
-      horizontalPadding: 30,
-    );
-
-    return RailTooltip(
-      message: 'Log out',
-      enabled: collapsed,
-      child: button,
     );
   }
 
@@ -142,11 +124,6 @@ class _MainPageState extends ConsumerState<MainPage> {
                       const Spacer(),
                       _collapseButton(sidebarCollapsed),
                     ],
-                  ),
-                  trailing: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [_logoutButton(sidebarCollapsed)],
                   ),
                   selectedIndex: currentIndex,
                   onDestinationSelected: _navigateToItem,
