@@ -2,16 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:jplayer/src/config/constants.dart';
-import 'package:jplayer/src/data/backend/server_type.dart';
 import 'package:jplayer/src/domain/providers/cloud_provider.dart';
 import 'package:jplayer/src/presentation/widgets/continuity_intro.dart';
 import 'package:jplayer/src/presentation/widgets/form_modal.dart';
 import 'package:jplayer/src/presentation/widgets/jellybox_cloud_connect_form.dart';
-import 'package:jplayer/src/providers/connectivity_provider.dart';
-import 'package:jplayer/src/providers/current_server_type_provider.dart';
-import 'package:jplayer/src/providers/server_addresses_provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 Future<void> connectJellyboxCloud(BuildContext context) async {
   final signedIn = await showFormModal<bool>(
@@ -46,89 +40,7 @@ class JellyboxCloudSettings extends ConsumerWidget {
             account == null ? 'Connect' : 'Connected as ${account.login}',
           ),
         ),
-        const _ServerConnectionRow(),
       ],
-    );
-  }
-}
-
-class _ServerConnectionRow extends ConsumerWidget {
-  const _ServerConnectionRow();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final connection = ref.watch(serverConnectionProvider);
-    final addresses = ref.watch(serverAddressesProvider);
-    final hasTunnel = addresses?.relay != null;
-    final tunnelUp = ref.watch(relayReachableProvider);
-    final notSetUp =
-        !hasTunnel &&
-        addresses?.relayDenied == null &&
-        ref.watch(currentServerTypeProvider) == ServerType.jellyfin;
-    final muted = Theme.of(
-      context,
-    ).colorScheme.onPrimary.withValues(alpha: 0.5);
-
-    final (icon, label) = switch (connection) {
-      ServerConnection.direct => (Icons.lan_outlined, 'Direct'),
-      ServerConnection.remote => (Icons.public_outlined, 'Remote address'),
-      ServerConnection.tunnel => (Icons.vpn_lock_outlined, 'Tunnel'),
-      ServerConnection.offline => (Icons.cloud_off_outlined, 'Offline'),
-    };
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            spacing: 8,
-            children: [Icon(icon, size: 18), Text('Connection: $label')],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 26, top: 2),
-            child: Text(
-              switch ((hasTunnel, tunnelUp)) {
-                (false, _) => switch (addresses?.relayDenied) {
-                  'plan_full' =>
-                    "This server's Jellybox Cloud plan has no free seat for "
-                        'your user. Ask the owner to make room.',
-                  'no_password' =>
-                    'Remote access needs a password on your Jellyfin user.',
-                  _ => 'No remote access address for this server yet.',
-                },
-                (true, false) =>
-                  'Remote access is set up, but the tunnel '
-                      'is not answering.',
-                _ => 'Remote access is set up and the tunnel is ready.',
-              },
-              style: TextStyle(fontSize: 12, height: 1.3, color: muted),
-            ),
-          ),
-          if (notSetUp)
-            Padding(
-              padding: const EdgeInsets.only(left: 26, top: 4),
-              child: InkWell(
-                onTap: () => unawaited(
-                  launchUrl(
-                    Uri.parse(jellyfinRelayPluginUrl),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                ),
-                child: Text(
-                  'Set up the JellyBox Relay plugin',
-                  style: TextStyle(
-                    fontSize: 12,
-                    height: 1.3,
-                    color: Theme.of(context).colorScheme.primary,
-                    decoration: TextDecoration.underline,
-                    decorationColor: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
     );
   }
 }
