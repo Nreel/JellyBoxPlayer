@@ -29,12 +29,42 @@ class _MainPageState extends ConsumerState<MainPage> {
   late ThemeData _theme;
   late DeviceType _device;
 
+  /// Rail destinations, in shell branch order. Settings is pinned to the
+  /// bottom of the rail instead, so it is only listed for the tab bar.
   Set<(IconData, String)> get _menuItems => {
     (Icons.home_outlined, 'Home'),
     (JPlayer.play_circle_outlined, 'Browse'),
-    (JPlayer.settings, 'Settings'),
     (JPlayer.download, 'Downloads'),
   };
+
+  /// Branch order for the mobile tab bar, Settings last.
+  List<(IconData, String)> get _tabItems => [
+    ..._menuItems,
+    (JPlayer.settings, 'Settings'),
+  ];
+
+  int get _settingsBranch => _menuItems.length;
+
+  Widget _settingsButton(bool collapsed) {
+    final selected = widget.shell.currentIndex == _settingsBranch;
+    final button = RailItemButton(
+      onPressed: () => _navigateToItem(_settingsBranch),
+      icon: const Icon(JPlayer.settings),
+      label: const Text('Settings'),
+      foregroundColor: selected
+          ? _theme.colorScheme.primary
+          : _theme.colorScheme.onPrimary,
+      backgroundColor: selected ? const Color(0xFF341010) : null,
+      fontSize: 16,
+      horizontalPadding: 30,
+    );
+
+    return RailTooltip(
+      message: 'Settings',
+      enabled: collapsed,
+      child: button,
+    );
+  }
 
   Widget _collapseButton(bool collapsed) {
     return RailTooltip(
@@ -125,7 +155,13 @@ class _MainPageState extends ConsumerState<MainPage> {
                       _collapseButton(sidebarCollapsed),
                     ],
                   ),
-                  selectedIndex: currentIndex,
+                  trailing: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [_settingsButton(sidebarCollapsed)],
+                  ),
+                  selectedIndex:
+                      currentIndex < _settingsBranch ? currentIndex : null,
                   onDestinationSelected: _navigateToItem,
                   destinations: List.generate(
                     _menuItems.length,
@@ -192,10 +228,10 @@ class _MainPageState extends ConsumerState<MainPage> {
           currentIndex: currentIndex,
           onTap: _navigateToItem,
           items: List.generate(
-            _menuItems.length,
+            _tabItems.length,
             (index) => BottomNavigationBarItem(
-              icon: Icon(_menuItems.elementAt(index).$1),
-              label: _menuItems.elementAt(index).$2,
+              icon: Icon(_tabItems.elementAt(index).$1),
+              label: _tabItems.elementAt(index).$2,
             ),
           ),
         ),

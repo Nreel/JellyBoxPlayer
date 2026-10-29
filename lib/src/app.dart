@@ -300,6 +300,15 @@ class _AppState extends ConsumerState<App>
             StatefulShellBranch(
               routes: [
                 GoRoute(
+                  path: Routes.downloads.path,
+                  name: Routes.downloads.name,
+                  pageBuilder: widget.screenFactory.downloadsPage,
+                ),
+              ],
+            ),
+            StatefulShellBranch(
+              routes: [
+                GoRoute(
                   path: Routes.settings.path,
                   name: Routes.settings.name,
                   pageBuilder: widget.screenFactory.settingsPage,
@@ -315,15 +324,6 @@ class _AppState extends ConsumerState<App>
                       pageBuilder: widget.screenFactory.queueCachePage,
                     ),
                   ],
-                ),
-              ],
-            ),
-            StatefulShellBranch(
-              routes: [
-                GoRoute(
-                  path: Routes.downloads.path,
-                  name: Routes.downloads.name,
-                  pageBuilder: widget.screenFactory.downloadsPage,
                 ),
               ],
             ),
