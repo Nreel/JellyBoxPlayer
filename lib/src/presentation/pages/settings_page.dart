@@ -153,14 +153,17 @@ class SettingsPage extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   spacing: 4,
                   children: [
-                    _sectionHeader('Servers'),
+                    _groupHeader('Connections'),
+                    _subsectionHeader('Content servers'),
                     const ServerAccountList(),
-                    _sectionHeader('Connection'),
+                    _subsectionHeader('Connection addresses'),
                     const ServerAddressSettings(),
                     if (ref.watch(cloudAvailableProvider)) ...[
-                      _sectionHeader('Jellybox Cloud'),
+                      _subsectionHeader('Continuity server'),
                       const JellyboxCloudSettings(),
                     ],
+                    _subsectionHeader('ListenBrainz'),
+                    const ListenBrainzSettings(),
                     _sectionHeader('General'),
                     if (kDebugMode) _settingsButton(context),
                     if (kDebugMode) _queueCacheButton(context),
@@ -407,8 +410,6 @@ class SettingsPage extends ConsumerWidget {
                         label: 'Share what I am listening to on Discord',
                       ),
                     ],
-                    _sectionHeader('ListenBrainz'),
-                    const ListenBrainzSettings(),
                     _sectionHeader('Lyrics'),
                     _settingDropdown<LyricsAlignment>(
                       context: context,
@@ -561,6 +562,32 @@ class SettingsPage extends ConsumerWidget {
       title,
       style: const TextStyle(
         fontSize: 18,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+      ),
+    ),
+  );
+
+  /// Top-level menu group, e.g. Connections.
+  Widget _groupHeader(String title) => Padding(
+    padding: const EdgeInsets.only(left: 12, top: 20, bottom: 6),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 22,
+        fontWeight: FontWeight.w600,
+        height: 1.2,
+      ),
+    ),
+  );
+
+  /// Group member, one step below [_sectionHeader].
+  Widget _subsectionHeader(String title) => Padding(
+    padding: const EdgeInsets.only(left: 12, top: 16, bottom: 4),
+    child: Text(
+      title,
+      style: const TextStyle(
+        fontSize: 16,
         fontWeight: FontWeight.w600,
         height: 1.2,
       ),

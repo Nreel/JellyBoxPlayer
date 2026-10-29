@@ -46,7 +46,7 @@ Open `http://<host>:8000/admin` and sign in as an administrator.
 
 The app reads the continuity URL from the `conductor_url` preference in every
 build. Set it to `http://<host-ip>:8000` (or `http://localhost:8000` when the
-app runs on the same machine) from the Jellybox Cloud settings, then sign in
+app runs on the same machine) from the Continuity server settings, then sign in
 with a login and password created in the admin UI.
 
 The first launch seeds that preference from `jellyboxCloudUrl` in
