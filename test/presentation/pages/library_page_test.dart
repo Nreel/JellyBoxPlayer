@@ -66,7 +66,7 @@ void main() {
     container: createProviderContainer(overrides: overrides()),
     child: MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      theme: Themes.red,
+      theme: Themes.withAccent(Themes.defaultAccent),
       routerConfig: GoRouter(
         routes: [
           GoRoute(

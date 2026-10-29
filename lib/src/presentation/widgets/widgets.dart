@@ -3,6 +3,7 @@ export 'jellybox_cloud_settings.dart';
 export 'server_accounts.dart';
 export 'server_address_settings.dart';
 export 'playing_elsewhere_strip.dart';
+export 'accent_color_picker.dart';
 export 'adaptive_builder.dart';
 export 'adaptive_dialog_action.dart';
 export 'album_card_metrics.dart';

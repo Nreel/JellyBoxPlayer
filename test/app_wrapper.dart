@@ -19,7 +19,7 @@ Widget createTestApp({
         S.delegate,
       ],
       supportedLocales: S.delegate.supportedLocales,
-      theme: Themes.red,
+      theme: Themes.withAccent(Themes.defaultAccent),
       home: home,
     ),
   );

@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:jplayer/resources/resources.dart';
 
 abstract class Themes {
+  /// Fallback app accent, matching the `AppSetting.accentColor` default.
+  static const defaultAccent = Color(0xFFFD2F2F);
+
   /// Dark surface used for tooltip backgrounds so they don't inherit the
-  /// maroon [BottomSheetThemeData] panel color used elsewhere in the app.
+  /// tinted [BottomSheetThemeData] panel color used elsewhere in the app.
   static const tooltipSurface = Color(0xFF1C1518);
 
   static const tooltipDelay = Duration(milliseconds: 350);
@@ -32,22 +35,44 @@ abstract class Themes {
     ],
   );
 
-  static final red = ThemeData(
-    useMaterial3: true,
-    visualDensity: VisualDensity.adaptivePlatformDensity,
-    brightness: Brightness.dark,
-    fontFamily: FontFamily.gilroy,
-    colorScheme: const ColorScheme.dark(
-      primary: Color(0xFFFD2F2F),
-      onPrimary: Colors.white,
-    ),
-    scaffoldBackgroundColor: Colors.black,
-    cupertinoOverrideTheme: const NoDefaultCupertinoThemeData(
-      primaryColor: Colors.white,
-      primaryContrastingColor: Color(0xFFFD2F2F),
-      barBackgroundColor: Color(0xFF471F27),
+  /// Dark, desaturated panel tone of [accent], keeping its hue. Used for
+  /// sheets, bars and chips so surfaces stay tinted toward the accent.
+  static Color _panelTone(
+    Color accent, {
+    required double saturation,
+    required double value,
+  }) => HSVColor.fromColor(accent)
+      .withSaturation(saturation)
+      .withValue(value)
+      .toColor();
+
+  static ThemeData? _cachedTheme;
+  static Color? _cachedAccent;
+
+  /// App theme built around [accent]; theme colors derived from the accent
+  /// retint panels toward its hue. Cached per accent so rebuilds are cheap.
+  static ThemeData withAccent(Color accent) {
+    final cached = _cachedTheme;
+    if (cached != null && _cachedAccent == accent) return cached;
+    final panel = _panelTone(accent, saturation: 0.56, value: 0.28);
+    final chipBackground = _panelTone(accent, saturation: 0.22, value: 0.21);
+
+    final theme = ThemeData(
+      useMaterial3: true,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      brightness: Brightness.dark,
+      fontFamily: FontFamily.gilroy,
+      colorScheme: ColorScheme.dark(
+        primary: accent,
+        onPrimary: Colors.white,
+      ),
       scaffoldBackgroundColor: Colors.black,
-    ),
+      cupertinoOverrideTheme: NoDefaultCupertinoThemeData(
+        primaryColor: Colors.white,
+        primaryContrastingColor: accent,
+        barBackgroundColor: panel,
+        scaffoldBackgroundColor: Colors.black,
+      ),
     snackBarTheme: const SnackBarThemeData(
       backgroundColor: Colors.black87,
       contentTextStyle: TextStyle(color: Colors.white),
@@ -58,21 +83,21 @@ abstract class Themes {
       thumbColor: Colors.white,
       thumbShape: RoundSliderThumbShape(enabledThumbRadius: 16),
     ),
-    bottomSheetTheme: const BottomSheetThemeData(
-      backgroundColor: Color(0xFF471F27),
-      shape: RoundedRectangleBorder(
+    bottomSheetTheme: BottomSheetThemeData(
+      backgroundColor: panel,
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(38)),
       ),
     ),
-    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: Color(0xFF471F27),
+    bottomNavigationBarTheme: BottomNavigationBarThemeData(
+      backgroundColor: panel,
     ),
-    navigationRailTheme: const NavigationRailThemeData(
-      backgroundColor: Color(0xFF471F27),
+    navigationRailTheme: NavigationRailThemeData(
+      backgroundColor: panel,
     ),
     chipTheme: ChipThemeData(
       labelPadding: const EdgeInsets.symmetric(horizontal: 11),
-      backgroundColor: const Color(0xFF362A30),
+      backgroundColor: chipBackground,
       selectedColor: const Color(0xFF0066FF),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
@@ -95,5 +120,10 @@ abstract class Themes {
       padding: tooltipPadding,
       waitDuration: tooltipDelay,
     ),
-  );
+    );
+
+    _cachedTheme = theme;
+    _cachedAccent = accent;
+    return theme;
+  }
 }

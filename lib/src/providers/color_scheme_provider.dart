@@ -7,7 +7,6 @@ import 'package:jplayer/resources/resources.dart';
 import 'package:jplayer/src/domain/models/models.dart';
 import 'package:jplayer/src/domain/providers/app_settings_provider.dart';
 import 'package:jplayer/src/domain/providers/player_bar_provider.dart';
-import 'package:jplayer/src/presentation/themes/themes.dart';
 import 'package:jplayer/src/providers/image_service_provider.dart';
 
 // Example image provider - this could be any provider that supplies an image
@@ -44,7 +43,7 @@ final AutoDisposeFutureProvider<ColorScheme?> artworkSchemeProvider =
 
 final AutoDisposeProvider<Color> accentColorProvider = Provider.autoDispose(
   (ref) {
-    final appAccent = Themes.red.colorScheme.primary;
+    final appAccent = ref.watch(appAccentColorProvider);
     if (!ref.watch(settingProvider(AppSetting.artworkAccent))) return appAccent;
     return ref.watch(artworkSchemeProvider).valueOrNull?.primary ?? appAccent;
   },

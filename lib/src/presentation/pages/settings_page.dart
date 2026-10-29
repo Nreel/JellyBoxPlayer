@@ -91,6 +91,21 @@ class SettingsPage extends ConsumerWidget {
     ContentUpdateInterval.never: 'Never',
   };
 
+  /// Preset app accents; the picker dialog covers everything else.
+  static const Map<String, Color> _accentPresets = {
+    'Red': Color(0xFFFD2F2F),
+    'Orange': Color(0xFFFF6B35),
+    'Amber': Color(0xFFFFAD44),
+    'Green': Color(0xFF3DBF5E),
+    'Teal': Color(0xFF2ECDB0),
+    'Blue': Color(0xFF3D8BFF),
+    'Violet': Color(0xFF8C6BFF),
+    'Pink': Color(0xFFFF5C8A),
+  };
+
+  static String _accentHex(Color color) =>
+      (color.toARGB32() & 0xFFFFFF).toRadixString(16).padLeft(6, '0');
+
   static const Map<ForwardCacheLimit, String> _forwardCacheLabels = {
     ForwardCacheLimit.off: 'Off',
     ForwardCacheLimit.mb500: '500 MB',
@@ -231,6 +246,13 @@ class SettingsPage extends ConsumerWidget {
                         'Affects Studio Mode and Landscape Mode.',
                       ),
                     ],
+                    _settingAccentColor(context, ref, isMobile: device.isMobile),
+                    _settingNote(
+                      context,
+                      'Recolours buttons, sliders and panels app-wide. When '
+                      '"Match button colours to the current track" is on, '
+                      'player buttons follow the cover art instead.',
+                    ),
                     _settingDropdown<ItemList>(
                       context: context,
                       label: 'Default browse tab',
@@ -440,6 +462,94 @@ class SettingsPage extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  Widget _settingAccentColor(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool isMobile,
+  }) {
+    final theme = Theme.of(context);
+    final current = ref.watch(appAccentColorProvider);
+    final muted = theme.colorScheme.onPrimary.withValues(alpha: 0.7);
+
+    final label = Text(
+      'Accent colour',
+      style: TextStyle(fontSize: 14, height: 1.2, color: muted),
+    );
+
+    final swatches = Wrap(
+      spacing: 6,
+      runSpacing: 4,
+      children: [
+        for (final entry in _accentPresets.entries)
+          IconButton(
+            key: Key('accent-${entry.key.toLowerCase()}'),
+            tooltip: entry.key,
+            onPressed: () => ref
+                .read(appSettingsProvider.notifier)
+                .setValue(AppSetting.accentColor, _accentHex(entry.value)),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+            icon: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Container(
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: entry.value,
+                  border: Border.all(
+                    color: entry.value == current
+                        ? theme.colorScheme.onPrimary
+                        : muted.withValues(alpha: 0.4),
+                    width: entry.value == current ? 2 : 1,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        IconButton(
+          key: const Key('accent-custom'),
+          tooltip: 'Custom colour',
+          onPressed: () => _onCustomAccentPressed(context, ref, current),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(width: 26, height: 26),
+          icon: Icon(Icons.palette_outlined, size: 18, color: muted),
+        ),
+      ],
+    );
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 12, top: 4, bottom: 4),
+      child: isMobile
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              spacing: 4,
+              children: [label, swatches],
+            )
+          : Row(
+              children: [
+                SizedBox(width: 170, child: label),
+                const SizedBox(width: 8),
+                swatches,
+              ],
+            ),
+    );
+  }
+
+  Future<void> _onCustomAccentPressed(
+    BuildContext context,
+    WidgetRef ref,
+    Color current,
+  ) async {
+    final picked = await showAppDialog<Color>(
+      context,
+      builder: (context) => AccentColorDialog(initial: current),
+    );
+    if (picked != null) {
+      ref
+          .read(appSettingsProvider.notifier)
+          .setValue(AppSetting.accentColor, _accentHex(picked));
+    }
   }
 
   Widget _purgeCacheButton(BuildContext context, WidgetRef ref) {

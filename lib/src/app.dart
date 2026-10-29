@@ -387,7 +387,7 @@ class _AppState extends ConsumerState<App>
 
     return MaterialApp.router(
       scaffoldMessengerKey: _scaffoldMessengerKey,
-      theme: Themes.red,
+      theme: Themes.withAccent(ref.watch(appAccentColorProvider)),
       debugShowCheckedModeBanner: false,
       localizationsDelegates: const [
         DefaultWidgetsLocalizations.delegate,

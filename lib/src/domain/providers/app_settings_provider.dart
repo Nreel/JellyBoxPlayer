@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' show Color;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jplayer/src/core/enums/enums.dart';
@@ -19,6 +20,7 @@ enum AppSetting {
   nowPlayingHalo('now_playing_halo'),
   albumArtTint('album_art_tint', defaultValue: true),
   artworkAccent('artwork_accent', defaultValue: true),
+  accentColor('accent_color', defaultValue: 'fd2f2f'),
   animatedCovers('animated_covers'),
   animationSpeed('animation_speed', defaultValue: 'medium'),
   generatedPlaylistsDisabled('disable_generated_playlists'),
@@ -197,6 +199,15 @@ final defaultStartPageProvider = Provider<StartPage>(
       StartPage.home,
 );
 
+/// The user-selected app accent colour, stored as a six-digit hex string.
+/// Invalid values fall back to the setting's default.
+final appAccentColorProvider = Provider<Color>(
+  (ref) => _asColor(
+    ref.watch(appSettingsProvider)[AppSetting.accentColor],
+    AppSetting.accentColor,
+  ),
+);
+
 bool _asBool(Object? value, AppSetting setting) {
   final resolved = value ?? setting.defaultValue;
   return resolved is bool && resolved;
@@ -210,6 +221,14 @@ String _asString(Object? value, AppSetting setting) {
 double _asDouble(Object? value, AppSetting setting) {
   final resolved = value ?? setting.defaultValue;
   return resolved is num ? resolved.toDouble() : 0;
+}
+
+Color _asColor(Object? value, AppSetting setting) {
+  final parsed = int.tryParse(
+    _asString(value, setting).replaceFirst('#', ''),
+    radix: 16,
+  );
+  return Color(0xFF000000 | (parsed ?? 0xFD2F2F) & 0xFFFFFF);
 }
 
 class AppSettingsNotifier extends StateNotifier<Map<AppSetting, Object>> {
