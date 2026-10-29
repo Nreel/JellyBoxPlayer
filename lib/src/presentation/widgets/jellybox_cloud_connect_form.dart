@@ -30,7 +30,7 @@ class _JellyboxCloudConnectFormState
   @override
   void initState() {
     super.initState();
-    _address = TextEditingController(text: ref.read(conductorUrlProvider));
+    _address = TextEditingController(text: ref.read(conductorUrlProvider).home);
   }
 
   @override
@@ -117,7 +117,8 @@ class _JellyboxCloudConnectFormState
           ] else ...[
             Text(
               'Connect to your own continuity server to start playback on one '
-              'device and carry on with another.',
+              'device and carry on with another. Add a remote address under '
+              'Continuity server to reach the same server away from home.',
               style: TextStyle(fontSize: 14, color: muted),
             ),
             const SizedBox(height: 16),

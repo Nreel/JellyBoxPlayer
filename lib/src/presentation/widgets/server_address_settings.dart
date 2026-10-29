@@ -49,13 +49,13 @@ class ServerAddressSettings extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       spacing: 4,
       children: [
-        _AddressRow(
+        AddressRow(
           label: 'Home',
           address: addresses.home,
           active: connection == ServerConnection.direct,
           muted: muted,
           actions: [
-            _ActionIcon(
+            ActionIcon(
               icon: Icons.edit_outlined,
               tooltip: 'Change home address',
               onPressed: () => _editHome(context),
@@ -70,18 +70,18 @@ class ServerAddressSettings extends ConsumerWidget {
             label: const Text('Add remote address'),
           )
         else
-          _AddressRow(
+          AddressRow(
             label: 'Remote',
             address: remote,
             active: connection == ServerConnection.remote,
             muted: muted,
             actions: [
-              _ActionIcon(
+              ActionIcon(
                 icon: Icons.edit_outlined,
                 tooltip: 'Change remote address',
                 onPressed: () => _edit(context),
               ),
-              _ActionIcon(
+              ActionIcon(
                 icon: Icons.delete_outline,
                 tooltip: 'Remove remote address',
                 onPressed: () => unawaited(
@@ -179,13 +179,14 @@ class _ConnectionStatusRow extends ConsumerWidget {
   }
 }
 
-class _AddressRow extends StatelessWidget {
-  const _AddressRow({
+class AddressRow extends StatelessWidget {
+  const AddressRow({
     required this.label,
     required this.address,
     required this.active,
     required this.muted,
     this.actions = const [],
+    super.key,
   });
 
   final String label;
@@ -219,11 +220,12 @@ class _AddressRow extends StatelessWidget {
   );
 }
 
-class _ActionIcon extends StatelessWidget {
-  const _ActionIcon({
+class ActionIcon extends StatelessWidget {
+  const ActionIcon({
     required this.icon,
     required this.tooltip,
     required this.onPressed,
+    super.key,
   });
 
   final IconData icon;

@@ -48,44 +48,50 @@ class _FakeServer {
   }
 
   void _answer(WebSocket socket, Map<String, dynamic> message) {
-    switch (message['type']) {
-      case 'signin':
-        socket.add(
-          jsonEncode({
-            'type': 'signed_in',
-            'account': {
-              'serverUrl': url.toString(),
-              'login': message['login'],
-              'userId': 'user-1',
-              'token': 'token-1',
-              'serverName': 'Fake',
-              'libraryName': 'Default',
-              'socketPath': '/ws',
-            },
-          }),
-        );
-      case 'register':
-        socket
-          ..add(
-            jsonEncode({
-              'type': 'registered',
-              'device_id': message['device_id'],
-              'session_key': 'user-1:server-1',
-            }),
-          )
-          ..add(
-            jsonEncode({
-              'type': 'state',
-              'doc': <String, dynamic>{},
-              'devices': <Map<String, dynamic>>[],
-              'active_renderer': null,
-            }),
-          );
+    final payloads = switch (message['type']) {
+      'signin' => [
+        jsonEncode({
+          'type': 'signed_in',
+          'account': {
+            'serverUrl': url.toString(),
+            'login': message['login'],
+            'userId': 'user-1',
+            'token': 'token-1',
+            'serverName': 'Fake',
+            'libraryName': 'Default',
+            'socketPath': '/ws',
+          },
+        }),
+      ],
+      'register' => [
+        jsonEncode({
+          'type': 'registered',
+          'device_id': message['device_id'],
+          'session_key': 'user-1:server-1',
+        }),
+        jsonEncode({
+          'type': 'state',
+          'doc': <String, dynamic>{},
+          'devices': <Map<String, dynamic>>[],
+          'active_renderer': null,
+        }),
+      ],
+      _ => const <String>[],
+    };
+    for (final payload in payloads) {
+      // The app may drop the socket while an answer is being written; a relay
+      // just loses it, so the fake does the same.
+      try {
+        socket.add(payload);
+      } on Object {
+        return;
+      }
     }
   }
 
   Future<void> close() async {
-    for (final socket in _sockets) {
+    // Sockets leave the list as they close, so iterate over a snapshot.
+    for (final socket in List.of(_sockets)) {
       await socket.close();
     }
     await _server.close(force: true);
@@ -145,13 +151,7 @@ Future<void> _waitFor(
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('first sign-in after changing the server address succeeds', () async {
-    final server = await _FakeServer.start();
-    addTearDown(server.close);
-    SharedPreferences.setMockInitialValues({
-      'conductor_url': server.url.toString(),
-    });
-    deviceId = 'provider-check-device';
+  ProviderContainer newContainer() {
     final player = _MockAudioPlayer();
     when(() => player.loopModeStream).thenAnswer((_) => const Stream.empty());
     final container = ProviderContainer(
@@ -162,6 +162,17 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    return container;
+  }
+
+  test('first sign-in after changing the server address succeeds', () async {
+    final server = await _FakeServer.start();
+    addTearDown(server.close);
+    SharedPreferences.setMockInitialValues({
+      'conductor_url': server.url.toString(),
+    });
+    deviceId = 'provider-check-device';
+    final container = newContainer();
 
     await container.read(sharedPreferencesProvider.future);
     final notifier = container.read(cloudProvider.notifier);
@@ -176,7 +187,7 @@ void main() {
     );
 
     expect(signedIn, isTrue);
-    expect(container.read(conductorUrlProvider), '${server.url}/');
+    expect(container.read(conductorUrlProvider).active, '${server.url}/');
     expect(container.read(cloudProvider).signedIn, isTrue);
     await _waitFor(
       () => server.received.any(
@@ -184,4 +195,33 @@ void main() {
       ),
     );
   });
+
+  test(
+    'a continuity server that only answers on the remote address connects '
+    'through it',
+    () async {
+      final server = await _FakeServer.start();
+      addTearDown(server.close);
+      final closed = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final deadPort = closed.port;
+      await closed.close(force: true);
+      SharedPreferences.setMockInitialValues({
+        'conductor_url': 'http://127.0.0.1:$deadPort',
+        'conductor_remote_url': server.url.toString(),
+      });
+      deviceId = 'provider-check-device';
+      final container = newContainer();
+
+      await container.read(sharedPreferencesProvider.future);
+      container.read(cloudProvider);
+
+      await _waitFor(() => container.read(cloudProvider).isConnected);
+
+      final addresses = container.read(conductorUrlProvider);
+      expect(addresses.active, server.url.toString());
+      expect(addresses.home, 'http://127.0.0.1:$deadPort');
+      expect(addresses.remote, server.url.toString());
+      expect(addresses.down, {'http://127.0.0.1:$deadPort'});
+    },
+  );
 }

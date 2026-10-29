@@ -49,6 +49,11 @@ build. Set it to `http://<host-ip>:8000` (or `http://localhost:8000` when the
 app runs on the same machine) from the Continuity server settings, then sign in
 with a login and password created in the admin UI.
 
+The same settings section also accepts a second address for the server in the
+`conductor_remote_url` preference (Tailscale, WireGuard or reverse proxy). The
+app keeps using the home address while it answers and switches to the remote
+one when it does not, so a device away from the LAN still connects.
+
 The first launch seeds that preference from `jellyboxCloudUrl` in
 `lib/src/config/constants.dart`, which reads `CONTINUITY_URL` at compile time:
 
