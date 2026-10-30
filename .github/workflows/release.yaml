@@ -21,16 +21,15 @@ permissions:
   contents: write
 
 env:
-  # App Store Connect and Play require build numbers to increase forever. Each
-  # platform workflow used to supply its own `github.run_number`, and those
-  # counters (macos-beta had reached ~53, and macos/fastlane/Fastfile adds a
-  # further 20 on top) do not survive the move to this orchestrator: inside a
-  # reusable workflow `github.run_number` is the *caller's*, and this file's own
-  # counter restarted at 1. This base lifts the new sequence clear of every
-  # number those old counters ever produced. Bump it if this workflow file is
-  # ever renamed or recreated, which resets the counter again. Android treats
-  # the result as a floor and may go higher if Play already holds a bigger
-  # version code (android/fastlane/Fastfile, resolve_version_code).
+  # Play requires version codes to increase forever. The old per-platform
+  # workflows supplied their own `github.run_number`, and those counters do not
+  # survive the move to this orchestrator: inside a reusable workflow
+  # `github.run_number` is the *caller's*, and this file's own counter restarted
+  # at 1. This base lifts the new sequence clear of every number those old
+  # counters ever produced. Bump it if this workflow file is ever renamed or
+  # recreated, which resets the counter again. Android treats the result as a
+  # floor and may go higher if Play already holds a bigger version code
+  # (android/fastlane/Fastfile, resolve_version_code).
   BUILD_NUMBER_BASE: 200
 
 # Two runs for the same tag would fight over the same release assets.
@@ -76,10 +75,10 @@ jobs:
               exit 1
             fi
             # An explicit build number is honoured, but never silently: one below
-            # the floor would be rejected by App Store Connect / Play after the
-            # builds have already run, which costs ~15 minutes to find out.
+            # the floor would be rejected by Play after the build has already
+            # run, which costs ~15 minutes to find out.
             if [ "$TAG_BUILD" -lt "$FLOOR" ]; then
-              echo "::error::Tag build number $TAG_BUILD is below the floor $FLOOR — the stores would reject it. Re-tag without a +build suffix, or use one above $FLOOR."
+              echo "::error::Tag build number $TAG_BUILD is below the floor $FLOOR — Play would reject it. Re-tag without a +build suffix, or use one above $FLOOR."
               exit 1
             fi
             BUILD_NUMBER="$TAG_BUILD"
@@ -109,7 +108,7 @@ jobs:
           # no --generate-notes, so the changelog comes from the REST
           # generate-notes endpoint (needs the tag on the remote; a manual run
           # without one gets an empty changelog rather than a failure).
-          INTRO="$(printf 'This is a modified fork of [avdept/JellyBoxPlayer](https://github.com/avdept/JellyBoxPlayer): the continuity feature is remade to work with the local continuity server created in this repository; analytics and patchnotes are removed; the interface is tweaked.\n')"
+          INTRO="$(printf 'This is a modified fork of [avdept/JellyBoxPlayer](https://github.com/avdept/JellyBoxPlayer): the continuity feature is remade to work with the local continuity server created in this repository; analytics and patchnotes are removed; the interface is tweaked. Apple platforms are dropped — releases ship Android, Linux and Windows builds only.\n')"
           GEN="$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" --jq '.body' 2>/dev/null || true)"
           NOTES="$(printf '%s\n%s\n\n---\n\nIf you like JellyBox, you can support its development at [ko-fi.com/nreel](https://ko-fi.com/nreel). ☕\n' "$INTRO" "$GEN")"
           gh release create "$TAG" \
@@ -138,15 +137,6 @@ jobs:
       release_tag: ${{ needs.prepare.outputs.tag }}
     secrets: inherit
 
-  macos-dmg:
-    needs: prepare
-    uses: ./.github/workflows/macos-dmg.yaml
-    with:
-      version: ${{ needs.prepare.outputs.version }}
-      build_number: ${{ needs.prepare.outputs.build_number }}
-      release_tag: ${{ needs.prepare.outputs.tag }}
-    secrets: inherit
-
   android:
     needs: prepare
     uses: ./.github/workflows/android-beta.yaml
@@ -156,26 +146,8 @@ jobs:
       release_tag: ${{ needs.prepare.outputs.tag }}
     secrets: inherit
 
-  # TestFlight legs attach nothing to the release; they are called from here so
-  # a tag push produces one run covering every platform.
-  ios:
-    needs: prepare
-    uses: ./.github/workflows/ios-beta.yaml
-    with:
-      version: ${{ needs.prepare.outputs.version }}
-      build_number: ${{ needs.prepare.outputs.build_number }}
-    secrets: inherit
-
-  macos-testflight:
-    needs: prepare
-    uses: ./.github/workflows/macos-beta.yaml
-    with:
-      version: ${{ needs.prepare.outputs.version }}
-      build_number: ${{ needs.prepare.outputs.build_number }}
-    secrets: inherit
-
   publish:
-    needs: [prepare, linux, windows, macos-dmg, android, ios, macos-testflight]
+    needs: [prepare, linux, windows, android]
     # `always()` so a single failing leg still reaches this job and reports why
     # the release stayed a draft.
     if: ${{ always() && needs.prepare.result == 'success' && (github.event_name != 'workflow_dispatch' || inputs.publish) }}
