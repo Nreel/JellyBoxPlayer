@@ -36,11 +36,12 @@ revoked tokens survive a restart.
    (see [Users and credentials](#users-and-credentials)).
 
 4. **Point the app at the server.** In JellyBox open
-   **Settings → Connections → Continuity server**, set the Home address to
+   **Settings → Connections → Continuity server** → Connect, enter all fields(Continuity server adress, Login, Password). Server is
    `http://<machine-ip>:8000` (`http://localhost:8000` when the app runs on the
-   same machine), then sign in with the login and password from step 3. The
-   address is stored as the `conductor_url` preference in every build.
+   same machine), login and password from step 3.
 
+   
+   The address is stored as the `conductor_url` preference in every build.
    To ship a build with the address preset, compile with a `CONTINUITY_URL`
    define instead of typing it in the app:
 
@@ -50,7 +51,7 @@ revoked tokens survive a restart.
 
    If the define is omitted the first launch defaults to `http://localhost:8000`.
 
-5. **Optional: reach the server away from home.** Add a Remote address (Tailscale,
+6. **Optional: reach the server away from home.** Add a Remote address (Tailscale,
    WireGuard or reverse proxy) in the same settings section - stored as
    `conductor_remote_url`. The app keeps using the home address while it answers
    and switches to the remote one when it does not, so a device away from the
