@@ -113,7 +113,7 @@ class FakeHost implements CloudHost<String> {
   @override
   final String deviceId;
 
-  final String? backend;
+  String? backend;
 
   final calls = <String>[];
   final _playback = StreamController<CloudPlayback?>.broadcast();
@@ -306,6 +306,45 @@ void main() {
     expect(register['device_id'], 'me');
     expect(register['backend_ref'], 'server-1');
     expect(register['token'], 'token-1');
+  });
+
+  test('a refresh over the same session keeps the registration', () async {
+    await cloud.signIn(
+      address: server.url.toString(),
+      login: 'me@example.com',
+      password: 'secret',
+    );
+    await settle();
+    server.received.clear();
+    await settle();
+
+    // The app refreshes whenever an address, a network interface or the signed
+    // in user is reported. Nothing moved, so re-registering would answer each
+    // refresh with a broadcast the app then reacts to, in a loop.
+    await cloud.refresh(benchUrl: server.url.toString());
+    await cloud.refresh(benchUrl: ' ${server.url} ');
+    await settle();
+
+    expect(server.ofType('register'), isEmpty);
+    expect(cloud.state.status, ConductorStatus.listening);
+  });
+
+  test('a media server switch re-registers into the new session', () async {
+    await cloud.signIn(
+      address: server.url.toString(),
+      login: 'me@example.com',
+      password: 'secret',
+    );
+    await settle();
+    server.received.clear();
+    await settle();
+
+    host.backend = 'server-2';
+    await cloud.refresh(benchUrl: server.url.toString());
+    await settle();
+
+    final register = server.ofType('register').single;
+    expect(register['backend_ref'], 'server-2');
   });
 
   test('rejected credentials fail without waiting for the timeout', () async {

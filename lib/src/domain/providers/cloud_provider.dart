@@ -144,15 +144,21 @@ class ConductorUrlNotifier extends StateNotifier<ConductorAddresses> {
   /// Called when a connection attempt to [url] failed: the other address takes
   /// over. When both have been seen down the retry alternates between them, so
   /// a server that comes back on either address is found again.
+  ///
+  /// A no-op outcome must leave the state untouched: `StateNotifier` notifies
+  /// listeners unconditionally, and an unnecessary notification re-registers
+  /// the device (see `CloudNotifier._refresh`).
   void recordFailure(String url) {
     final down = {...state.down, url};
     final others = state.candidates.where((c) => c != url).toList();
     if (others.isEmpty) {
+      if (down.length == state.down.length && state.active == url) return;
       state = state.copyWith(down: down);
       return;
     }
     final next =
         others.firstWhereOrNull((c) => !down.contains(c)) ?? others.first;
+    if (down.length == state.down.length && state.active == next) return;
     state = state.copyWith(down: down, active: next);
   }
 
@@ -160,10 +166,12 @@ class ConductorUrlNotifier extends StateNotifier<ConductorAddresses> {
   /// and a remote-only success marks home unreachable.
   void recordSuccess(String url) {
     if (url == state.home) {
+      if (state.active == url && state.down.isEmpty) return;
       state = state.copyWith(down: const {}, active: url);
       return;
     }
     if (url == state.remote && state.home.isNotEmpty) {
+      if (state.down.contains(state.home)) return;
       state = state.copyWith(down: {...state.down, state.home});
     }
   }
@@ -171,6 +179,7 @@ class ConductorUrlNotifier extends StateNotifier<ConductorAddresses> {
   /// Forget what was unreachable, e.g. after a network interface change; the
   /// home address is tried first again.
   void clearDown() {
+    if (state.down.isEmpty) return;
     final home = state.home;
     state = state.copyWith(
       down: const {},
@@ -207,11 +216,18 @@ class CloudNotifier extends StateNotifier<CloudState> {
     });
 
     _ref
-      ..listen(conductorUrlProvider, (_, _) {
+      ..listen(conductorUrlProvider, (previous, next) {
         // [signIn] updates the addresses and the cloud URL together. Letting
         // refresh also react would close the socket mid-sign-in and make the
         // first attempt against a new server fail.
-        if (!_signingIn) unawaited(_refresh());
+        //
+        // Only an actual address change may re-register: an incoming playback
+        // doc settles the connection as a success, and reacting to that would
+        // send a register per broadcast, which fans the whole queue out again
+        // and makes every peer register in turn.
+        if (!_signingIn && _addressChanged(previous, next)) {
+          unawaited(_refresh());
+        }
       })
       ..listen(currentUserProvider, (_, next) {
         if (next == null && _ref.read(accountsProvider).isEmpty) {
@@ -347,6 +363,16 @@ class CloudNotifier extends StateNotifier<CloudState> {
   }
 
   Future<void> _refresh() => _cloud.refresh(benchUrl: _benchUrl());
+
+  /// Whether the address the socket should reach the server through moved.
+  /// Marking an address down or up without moving `active` is not a change the
+  /// socket needs to react to.
+  bool _addressChanged(ConductorAddresses? previous, ConductorAddresses next) {
+    if (previous == null) return true;
+    return previous.home != next.home ||
+        previous.remote != next.remote ||
+        previous.active != next.active;
+  }
 
   String? _benchUrl() {
     final url = _ref.read(conductorUrlProvider).active.trim();

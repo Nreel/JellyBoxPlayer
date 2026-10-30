@@ -135,6 +135,7 @@ class JellyboxCloud<S> {
   DateTime? _lastPublishAt;
   ContinuityAccount? _account;
   String? _serverUrl;
+  String? _lastRegisterKey;
   bool _observing = false;
   bool _disposed = false;
 
@@ -202,9 +203,16 @@ class JellyboxCloud<S> {
       await _connect(_serverUrl!);
       return;
     }
-    // Already connected: re-register so a user/server switch moves this device
-    // into the right session instead of leaving it behind in the old one.
-    if (_account != null) _register();
+    // Already connected: re-register only when this device's session identity
+    // moved (a user or server switch). A snapshot settling the connection as a
+    // success, a network event or an address that merely came back up must not
+    // re-register: every register answers with a broadcast, and reacting to
+    // that fans the whole queue out again, at socket speed.
+    final key = _sessionIdentity();
+    if (_account != null && key != _lastRegisterKey) {
+      _lastRegisterKey = key;
+      _register();
+    }
   }
 
   Future<void> networkChanged() async {
@@ -277,6 +285,8 @@ class JellyboxCloud<S> {
     _publishTimer = null;
     _pendingPublish = null;
     _observing = false;
+    // A new socket needs a register even when nothing else moved.
+    _lastRegisterKey = null;
     final channel = _channel;
     _channel = null;
     final subscription = _channelSubscription;
@@ -521,6 +531,7 @@ class JellyboxCloud<S> {
   }
 
   void _register() {
+    _lastRegisterKey = _sessionIdentity();
     _send({
       'type': 'register',
       'device_id': _host.deviceId,
@@ -530,6 +541,11 @@ class JellyboxCloud<S> {
       'token': _account?.token ?? '',
     });
   }
+
+  /// The session this device belongs to: its identity plus the account and the
+  /// media server it registers against.
+  String _sessionIdentity() =>
+      '${_host.deviceId}|${_host.backendRef}|${_account?.userId ?? ''}|${_account?.token ?? ''}';
 
   void _handleRegistered() {
     // A live connection ends the backoff; a dropped one starts it again.
