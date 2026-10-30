@@ -20,6 +20,7 @@ void main() {
   Future<SharedPreferences> pumpSettings(
     WidgetTester tester, [
     Map<String, String> values = const {},
+    CloudState cloud = const CloudState(),
   ]) async {
     // The address form opens as a desktop dialog on a wide surface; the 800x600
     // test window would show a bottom sheet whose Save button is off-screen.
@@ -32,9 +33,14 @@ void main() {
       ProviderScope(
         overrides: [
           sharedPreferencesProvider.overrideWith((_) => prefs),
-          cloudProvider.overrideWith(
-            (_) => _FakeCloudNotifier(const CloudState()),
-          ),
+          cloudProvider.overrideWith((_) {
+            final notifier = _FakeCloudNotifier(cloud);
+            when(notifier.signOut).thenAnswer(
+              (_) async =>
+                  notifier.state = notifier.state.copyWith(clearAccount: true),
+            );
+            return notifier;
+          }),
         ],
         child: const MaterialApp(
           home: Scaffold(body: JellyboxCloudSettings()),
@@ -124,5 +130,28 @@ void main() {
     expect(find.text('Remote'), findsNothing);
     expect(find.text('Add remote address'), findsOneWidget);
     expect(prefs.getString('conductor_remote_url'), isNull);
+  });
+
+  testWidgets('- disconnects inline without opening the manage modal', (
+    tester,
+  ) async {
+    await pumpSettings(tester, const {}, const CloudState(
+      account: ContinuityAccount(
+        serverUrl: 'http://192.168.1.10:8000',
+        login: 'alice',
+        userId: 'u1',
+        token: 'tok',
+      ),
+    ));
+
+    expect(find.text('Connected as alice'), findsOneWidget);
+    expect(find.byTooltip('Disconnect from Jellybox Cloud'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Disconnect from Jellybox Cloud'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Connect'), findsOneWidget);
+    expect(find.text('Connected as alice'), findsNothing);
+    expect(find.byTooltip('Disconnect from Jellybox Cloud'), findsNothing);
   });
 }

@@ -90,16 +90,32 @@ class JellyboxCloudSettings extends ConsumerWidget {
               ),
             ],
           ),
-        TextButton.icon(
-          onPressed: () => unawaited(connectJellyboxCloud(context)),
-          style: _buttonStyle,
-          icon: Icon(
-            account == null ? Icons.cloud_outlined : Icons.cloud_done,
+        if (account case final acct?)
+          Row(
+            spacing: 4,
+            children: [
+              TextButton.icon(
+                onPressed: () => unawaited(connectJellyboxCloud(context)),
+                style: _buttonStyle,
+                icon: const Icon(Icons.cloud_done),
+                label: Text('Connected as ${acct.login}'),
+              ),
+              const Icon(Icons.check, size: 16),
+              ActionIcon(
+                icon: Icons.logout,
+                tooltip: 'Disconnect from Jellybox Cloud',
+                onPressed: () =>
+                    unawaited(ref.read(cloudProvider.notifier).signOut()),
+              ),
+            ],
+          )
+        else
+          TextButton.icon(
+            onPressed: () => unawaited(connectJellyboxCloud(context)),
+            style: _buttonStyle,
+            icon: const Icon(Icons.cloud_outlined),
+            label: const Text('Connect'),
           ),
-          label: Text(
-            account == null ? 'Connect' : 'Connected as ${account.login}',
-          ),
-        ),
       ],
     );
   }

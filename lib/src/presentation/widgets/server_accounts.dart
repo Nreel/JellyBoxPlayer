@@ -157,7 +157,7 @@ class _AccountRow extends StatelessWidget {
           spacing: 12,
           children: [
             ServerLogo(account: account, size: 20),
-            Expanded(
+            Flexible(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
