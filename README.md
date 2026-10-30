@@ -1,3 +1,6 @@
+> [!NOTE]
+> **This is a fork of [avdept/JellyBoxPlayer](https://github.com/avdept/JellyBoxPlayer).** The point of the fork is playback continuity working entirely on your own hardware: instead of the closed-source Jellybox Cloud backend, devices hand off playback through the [continuity server](./continuity-server/README.md) - a small relay you run in a Docker container on your LAN, one `docker run` away from running. Analytics and patchnotes are removed and the interface is tweaked; Apple platforms and the Google Play listing are dropped.
+
 <div align="center">
 
 <img src="./docs/logo.png" width="120" alt="JellyBox logo">
@@ -24,7 +27,7 @@
 
 ---
 
-JellyBox is a music client for [Jellyfin](https://jellyfin.org), [Emby](https://emby.media) and [Navidrome](https://www.navidrome.org) (any OpenSubsonic-compatible server can be tried, but only Navidrome is tested). It focuses on doing one thing well: making your own music library feel like a modern streaming app - fast browsing, offline downloads and progressive caching, lyrics, spotify-like everyday playlists, playback continuity between your devices through your own Jellybox Cloud server, along with a UI built for each platform rather than a single stretched layout.
+JellyBox is a music client for [Jellyfin](https://jellyfin.org), [Emby](https://emby.media) and [Navidrome](https://www.navidrome.org) (any OpenSubsonic-compatible server can be tried, but only Navidrome is tested). It focuses on doing one thing well: making your own music library feel like a modern streaming app - fast browsing, offline downloads and progressive caching, lyrics, spotify-like everyday playlists, playback continuity between your devices through your own local continuity server, along with a UI built for each platform rather than a single stretched layout.
 
 > [!IMPORTANT]
 > JellyBox is a client, not a server. You need access to a running Jellyfin, Emby or Navidrome server with a music library on it.
