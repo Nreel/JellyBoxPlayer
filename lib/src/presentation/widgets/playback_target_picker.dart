@@ -191,88 +191,23 @@ class _PlaybackTargetButtonState extends ConsumerState<PlaybackTargetButton> {
     required Color idleColor,
     required Color activeColor,
     required VoidCallback open,
-  }) => Stack(
-    clipBehavior: Clip.none,
-    children: [
-      HoverIconButton(
-        tooltip: casting ? 'Playing on ${target.name}' : 'Play on a device',
-        style: box == null
-            ? null
-            : ButtonStyle(
-                padding: const WidgetStatePropertyAll(EdgeInsets.zero),
-                minimumSize: WidgetStatePropertyAll(Size.square(box)),
-                maximumSize: WidgetStatePropertyAll(Size.square(box)),
-              ),
-        iconSize: glyph,
-        color: idleColor,
-        selectedColor: activeColor,
-        icon: const Icon(Icons.cast),
-        selectedIcon: const Icon(Icons.cast_connected),
-        isSelected: casting,
-        onPressed: open,
-      ),
-      Positioned(
-        top: 0,
-        right: 0,
-        child: IgnorePointer(
-          child: _BetaBadge(
-            scale: glyph / 24,
-            background: activeColor,
-            foreground: idleColor,
+  }) => HoverIconButton(
+    tooltip: casting ? 'Playing on ${target.name}' : 'Play on a device',
+    style: box == null
+        ? null
+        : ButtonStyle(
+            padding: const WidgetStatePropertyAll(EdgeInsets.zero),
+            minimumSize: WidgetStatePropertyAll(Size.square(box)),
+            maximumSize: WidgetStatePropertyAll(Size.square(box)),
           ),
-        ),
-      ),
-    ],
+    iconSize: glyph,
+    color: idleColor,
+    selectedColor: activeColor,
+    icon: const Icon(Icons.cast),
+    selectedIcon: const Icon(Icons.cast_connected),
+    isSelected: casting,
+    onPressed: open,
   );
-}
-
-class _BetaBadge extends StatelessWidget {
-  const _BetaBadge({
-    required this.scale,
-    required this.background,
-    required this.foreground,
-  });
-
-  final double scale;
-  final Color background;
-  final Color foreground;
-
-  @override
-  Widget build(BuildContext context) {
-    final fontSize = 9 * scale;
-    final letterSpacing = 0.4 * scale;
-    final padding = 4 * scale;
-
-    return Container(
-      height: fontSize + 4 * scale,
-      alignment: Alignment.center,
-      padding: EdgeInsets.only(
-        left: padding + letterSpacing / 2,
-        right: padding,
-        top: fontSize * 0.2,
-      ),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(4 * scale),
-      ),
-      child: Text(
-        'BETA',
-        textAlign: TextAlign.center,
-        strutStyle: StrutStyle(
-          fontSize: fontSize,
-          height: 1,
-          forceStrutHeight: true,
-        ),
-        style: TextStyle(
-          fontSize: fontSize,
-          height: 1,
-          letterSpacing: letterSpacing,
-          fontWeight: FontWeight.bold,
-          color: foreground,
-        ),
-      ),
-    );
-  }
 }
 
 class PlaybackTargetMenu extends ConsumerStatefulWidget {

@@ -1005,46 +1005,6 @@ void main() {
       expect(button.iconSize, 26);
     });
 
-    testWidgets('- carries a beta badge that does not eat the tap', (
-      tester,
-    ) async {
-      await pumpButton(tester);
-
-      expect(find.text('BETA'), findsOneWidget);
-
-      await tester.tapAt(tester.getCenter(find.text('BETA')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Play on'), findsOneWidget);
-    });
-
-    testWidgets('- centres the badge text in its pill', (tester) async {
-      await pumpButton(tester, iconThemeSize: 24);
-
-      final label = tester.widget<Text>(find.text('BETA'));
-      expect(label.style!.fontSize, 9);
-      expect(label.textAlign, TextAlign.center);
-      expect(label.strutStyle!.forceStrutHeight, isTrue);
-      expect(label.strutStyle!.fontSize, 9);
-
-      final pill = find
-          .ancestor(of: find.text('BETA'), matching: find.byType(Container))
-          .first;
-      final pillRect = tester.getRect(pill);
-      final textRect = tester.getRect(find.text('BETA'));
-
-      expect(
-        textRect.center.dx,
-        moreOrLessEquals(pillRect.center.dx, epsilon: 0.75),
-      );
-      expect(
-        textRect.center.dy - pillRect.center.dy,
-        moreOrLessEquals(0.9, epsilon: 0.3),
-      );
-      expect(textRect.height, lessThanOrEqualTo(pillRect.height));
-      expect(textRect.width, lessThanOrEqualTo(pillRect.width));
-    });
-
     testWidgets('- opens the menu above the button on a desktop', (
       tester,
     ) async {
@@ -1154,7 +1114,7 @@ void main() {
       expect(tester.getSize(find.byType(PlaybackTargetMenu)).width, 375);
     });
 
-    testWidgets('- tints the icon and badge with the colours it is given', (
+    testWidgets('- tints the icon with the colour it is given', (
       tester,
     ) async {
       await pumpBody(
@@ -1174,19 +1134,6 @@ void main() {
       expect(
         IconTheme.of(tester.element(find.byIcon(Icons.cast))).color,
         Colors.white,
-      );
-
-      final label = tester.widget<Text>(find.text('BETA'));
-      expect(label.style!.color, Colors.white);
-
-      final pill = tester.widget<Container>(
-        find
-            .ancestor(of: find.text('BETA'), matching: find.byType(Container))
-            .first,
-      );
-      expect(
-        (pill.decoration! as BoxDecoration).color,
-        Colors.amber,
       );
     });
 
