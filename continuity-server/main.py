@@ -117,10 +117,12 @@ class SessionDoc(BaseModel):
         if not isinstance(item_ids, list):
             raise ValueError("doc.itemIds must be a list")
         volume = raw.get("volume")
+        # item_ids is reused as-is: json already produced the list, and copying
+        # tens of thousands of ids per tick is pure waste.
         return cls.model_construct(
             backendRef=raw.get("backendRef"),
             albumId=raw.get("albumId"),
-            itemIds=[str(item) for item in item_ids],
+            itemIds=item_ids,
             queuePosition=int(raw.get("queuePosition") or 0),
             trackPositionMs=int(raw.get("trackPositionMs") or 0),
             playing=bool(raw.get("playing")),
