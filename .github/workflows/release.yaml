@@ -104,11 +104,19 @@ jobs:
             echo "::notice::Release $TAG already exists — reusing it, notes left untouched."
             exit 0
           fi
+          # Body order is fixed: fork notice on top, GitHub's generated
+          # changelog below it, sponsorship footer last. `gh release edit` has
+          # no --generate-notes, so the changelog comes from the REST
+          # generate-notes endpoint (needs the tag on the remote; a manual run
+          # without one gets an empty changelog rather than a failure).
+          INTRO="$(printf 'This is a modified fork of [avdept/JellyBoxPlayer](https://github.com/avdept/JellyBoxPlayer): the continuity feature is remade to work with the local continuity server created in this repository; analytics and patchnotes are removed; the interface is tweaked.\n')"
+          GEN="$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" --jq '.body' 2>/dev/null || true)"
+          NOTES="$(printf '%s\n%s\n\n---\n\nIf you like JellyBox, you can support its development at [ko-fi.com/nreel](https://ko-fi.com/nreel). ☕\n' "$INTRO" "$GEN")"
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title "Release $VERSION" \
             --target "$GITHUB_SHA" \
-            --generate-notes \
+            --notes "$NOTES" \
             --draft
           echo "::notice::Created draft release $TAG"
 

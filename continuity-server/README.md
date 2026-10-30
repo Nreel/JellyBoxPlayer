@@ -9,14 +9,22 @@ revoked tokens survive a restart.
 
 ## Setup
 
-1. **Start the server.** With Docker (recommended):
+1. **Clone the repository.** The server ships in this repo; nothing else
+   installs it:
 
    ```bash
-   cd continuity-server
+   git clone https://github.com/Nreel/JellyBoxPlayer.git
+   ```
+
+2. **Start the server.** With Docker (recommended):
+
+   ```bash
+   cd JellyBoxPlayer/continuity-server
    docker compose up --build -d
    ```
 
-   Or run it directly, without a container, on Python 3.12+:
+   Or run it directly, without a container, on Python 3.12+, from the same
+   directory:
 
    ```bash
    pip install -r requirements.txt
@@ -28,17 +36,17 @@ revoked tokens survive a restart.
    boot and keeps accounts in the `continuity-data` volume; deleting that volume
    resets the server.
 
-2. **Create the administrator.** Open `http://<machine-ip>:8000/admin` on first
+3. **Create the administrator.** Open `http://<machine-ip>:8000/admin` on first
    run and create the first admin there - there is no default account or password.
 
-3. **Create a user.** In the admin UI add a user with a **login** (not an email)
+4. **Create a user.** In the admin UI add a user with a **login** (not an email)
    and a password. This is the identity your JellyBox devices sign in with
    (see [Users and credentials](#users-and-credentials)).
 
-4. **Point the app at the server.** In JellyBox open
+5. **Point the app at the server.** In JellyBox open
    **Settings → Connections → Continuity server** → Connect, enter all fields(Continuity server adress, Login, Password). Server is
    `http://<machine-ip>:8000` (`http://localhost:8000` when the app runs on the
-   same machine), login and password from step 3.
+   same machine), login and password from step 4.
 
    
    The address is stored as the `conductor_url` preference in every build.
