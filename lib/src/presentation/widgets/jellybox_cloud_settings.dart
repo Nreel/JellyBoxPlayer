@@ -3,20 +3,16 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jplayer/src/domain/providers/cloud_provider.dart';
-import 'package:jplayer/src/presentation/widgets/continuity_intro.dart';
 import 'package:jplayer/src/presentation/widgets/form_modal.dart';
 import 'package:jplayer/src/presentation/widgets/jellybox_cloud_connect_form.dart';
 import 'package:jplayer/src/presentation/widgets/labeled_text_field.dart';
 import 'package:jplayer/src/presentation/widgets/server_address_settings.dart';
 
 Future<void> connectJellyboxCloud(BuildContext context) async {
-  final signedIn = await showFormModal<bool>(
+  await showFormModal<bool>(
     context,
     builder: (context) => const JellyboxCloudConnectForm(),
   );
-  if (signedIn == true && context.mounted) {
-    await ContinuityIntro.show(context);
-  }
 }
 
 class JellyboxCloudSettings extends ConsumerWidget {
