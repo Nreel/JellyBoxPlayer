@@ -7,21 +7,59 @@ It also ships a small admin web UI for the accounts and credentials that
 JellyBox devices sign in with. Accounts live in SQLite, so users, passwords and
 revoked tokens survive a restart.
 
-## Run
+## Setup
 
-```bash
-cd continuity-server
-docker compose up --build -d
-```
+1. **Start the server.** With Docker (recommended):
 
-The server listens on `http://0.0.0.0:8000`; the WebSocket endpoint is
-`ws://<host>:8000/ws` and the admin UI is at `http://<host>:8000/admin`.
+   ```bash
+   cd continuity-server
+   docker compose up --build -d
+   ```
 
-Open the admin UI on first run and create the first administrator. The account
-database is stored in the `continuity-data` Docker volume; deleting the volume
-resets the server.
+   Or run it directly, without a container, on Python 3.12+:
 
-### Configuration
+   ```bash
+   pip install -r requirements.txt
+   uvicorn main:app --host 0.0.0.0 --port 8000
+   ```
+
+   The relay listens on `http://<machine-ip>:8000` - WebSocket endpoint `/ws`,
+   admin UI `/admin`. The compose service health-checks `/health`, restarts on
+   boot and keeps accounts in the `continuity-data` volume; deleting that volume
+   resets the server.
+
+2. **Create the administrator.** Open `http://<machine-ip>:8000/admin` on first
+   run and create the first admin there - there is no default account or password.
+
+3. **Create a user.** In the admin UI add a user with a **login** (not an email)
+   and a password. This is the identity your JellyBox devices sign in with
+   (see [Users and credentials](#users-and-credentials)).
+
+4. **Point the app at the server.** In JellyBox open
+   **Settings → Connections → Continuity server**, set the Home address to
+   `http://<machine-ip>:8000` (`http://localhost:8000` when the app runs on the
+   same machine), then sign in with the login and password from step 3. The
+   address is stored as the `conductor_url` preference in every build.
+
+   To ship a build with the address preset, compile with a `CONTINUITY_URL`
+   define instead of typing it in the app:
+
+   ```bash
+   flutter build apk --dart-define=CONTINUITY_URL=http://192.168.1.10:8000
+   ```
+
+   If the define is omitted the first launch defaults to `http://localhost:8000`.
+
+5. **Optional: reach the server away from home.** Add a Remote address (Tailscale,
+   WireGuard or reverse proxy) in the same settings section - stored as
+   `conductor_remote_url`. The app keeps using the home address while it answers
+   and switches to the remote one when it does not, so a device away from the
+   LAN still connects.
+
+Once every device is signed in, playback started on one can be claimed by any
+other - see the handoff messages in [Protocol](#protocol).
+
+## Configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
@@ -51,27 +89,6 @@ Open `http://<host>:8000/admin` and sign in as an administrator.
   created; revoking or deleting one disconnects the devices using it.
 - Disabling or deleting a user drops its live relay sessions immediately.
 - The last active administrator cannot be deleted, demoted or disabled.
-
-## Point the app at it
-
-The app reads the continuity URL from the `conductor_url` preference in every
-build. Set it to `http://<host-ip>:8000` (or `http://localhost:8000` when the
-app runs on the same machine) from the Continuity server settings, then sign in
-with a login and password created in the admin UI.
-
-The same settings section also accepts a second address for the server in the
-`conductor_remote_url` preference (Tailscale, WireGuard or reverse proxy). The
-app keeps using the home address while it answers and switches to the remote
-one when it does not, so a device away from the LAN still connects.
-
-The first launch seeds that preference from `jellyboxCloudUrl` in
-`lib/src/config/constants.dart`, which reads `CONTINUITY_URL` at compile time:
-
-```bash
-flutter build apk --dart-define=CONTINUITY_URL=http://192.168.1.10:8000
-```
-
-If the define is omitted it defaults to `http://localhost:8000`.
 
 ## Protocol
 

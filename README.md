@@ -157,6 +157,10 @@ JellyBox is a music client for [Jellyfin](https://jellyfin.org), [Emby](https://
 - [x] Apple CarPlay - currently in beta stage.
 - [x] Android Auto - currently in beta stage.
 
+## Continuity server
+
+Handing playback from one device to another runs against a **continuity server** you own: a small self-hosted WebSocket relay with an admin UI for accounts - no HTTPS, no domain, no external account ([continuity-server/README.md](./continuity-server/README.md)). Start it with `docker compose up --build -d`, add its address under **Settings → Connections → Continuity server**, and sign in on every device with the same login; a track started on one device can then be claimed by any other.
+
 ## Platform notes
 
 ### macOS - media keys
