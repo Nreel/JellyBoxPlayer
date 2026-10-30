@@ -21,15 +21,15 @@ permissions:
   contents: write
 
 env:
-  # Play requires version codes to increase forever. The old per-platform
-  # workflows supplied their own `github.run_number`, and those counters do not
-  # survive the move to this orchestrator: inside a reusable workflow
-  # `github.run_number` is the *caller's*, and this file's own counter restarted
-  # at 1. This base lifts the new sequence clear of every number those old
-  # counters ever produced. Bump it if this workflow file is ever renamed or
-  # recreated, which resets the counter again. Android treats the result as a
-  # floor and may go higher if Play already holds a bigger version code
-  # (android/fastlane/Fastfile, resolve_version_code).
+  # Version codes must keep increasing so an upgraded debug-signed APK replaces
+  # the installed one. The old platform workflows supplied their own
+  # `github.run_number`, and those counters do not survive the move to this
+  # orchestrator: inside a reusable workflow `github.run_number` is the
+  # *caller's*, and this file's own counter restarted at 1. This base lifts the
+  # new sequence clear of every number those old counters ever produced
+  # (including the codes Play held before the Play listing was dropped). Bump
+  # it if this workflow file is ever renamed or recreated, which resets the
+  # counter again.
   BUILD_NUMBER_BASE: 200
 
 # Two runs for the same tag would fight over the same release assets.
@@ -108,9 +108,9 @@ jobs:
           # no --generate-notes, so the changelog comes from the REST
           # generate-notes endpoint (needs the tag on the remote; a manual run
           # without one gets an empty changelog rather than a failure).
-          INTRO="$(printf 'This is a modified fork of [avdept/JellyBoxPlayer](https://github.com/avdept/JellyBoxPlayer): the continuity feature is remade to work with the local continuity server created in this repository; analytics and patchnotes are removed; the interface is tweaked. Apple platforms are dropped — releases ship Android, Linux and Windows builds only.\n')"
+          INTRO="$(printf 'This is a modified fork of [avdept/JellyBoxPlayer](https://github.com/avdept/JellyBoxPlayer): the continuity feature is remade to work with the local continuity server created in this repository; analytics and patchnotes are removed; the interface is tweaked. Apple platforms and the Google Play listing are dropped — releases ship Android as a debug-signed universal APK plus Linux and Windows builds.\n')"
           GEN="$(gh api "repos/$GITHUB_REPOSITORY/releases/generate-notes" -f tag_name="$TAG" --jq '.body' 2>/dev/null || true)"
-          NOTES="$(printf '%s\n%s\n\n---\n\nIf you like JellyBox, you can support its development at [ko-fi.com/nreel](https://ko-fi.com/nreel). ☕\n' "$INTRO" "$GEN")"
+          NOTES="$(printf '%s\n%s\n\n---\n\nIf you like this fork of JellyBox, you can support its development at [ko-fi.com/nreel](https://ko-fi.com/nreel). ☕\n' "$INTRO" "$GEN")"
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --title "Release $VERSION" \
