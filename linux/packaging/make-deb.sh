@@ -63,8 +63,8 @@ fpm -s dir -t deb \
   --iteration "$ITERATION" \
   --architecture "$ARCH" \
   --license AGPL-3.0 \
-  --maintainer "Alex Sinelnikov" \
-  --url "https://github.com/avdept/JellyBoxPlayer" \
+  --maintainer "Nreel" \
+  --url "https://github.com/Nreel/JellyBoxPlayer" \
   --description "Jellyfin client for Linux" \
   --category sound \
   --force \

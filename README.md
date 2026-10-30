@@ -4,19 +4,17 @@
 
 # JellyBox
 
-**A native crossplatform music player for your Jellyfin, Emby or Navidrome server - on macOS, Windows, Linux, iOS and Android, with Apple CarPlay and Android Auto.**
+**A native crossplatform music player for your Jellyfin, Emby or Navidrome server - on macOS, Windows, Linux, iOS and Android, with Apple CarPlay, Android Auto and playback handoff between devices.**
 
 [![Works with Jellyfin](https://img.shields.io/badge/Jellyfin-00A4DC?logo=jellyfin&logoColor=white)](https://jellyfin.org)
 [![Works with Emby](https://img.shields.io/badge/Emby-52B54B?logo=emby&logoColor=white)](https://emby.media)
 [![Works with Navidrome](https://img.shields.io/badge/Navidrome-1F2A44?logoColor=white)](https://www.navidrome.org)
 
-[![Build Status](https://github.com/avdept/JellyBoxPlayer/actions/workflows/tests.yaml/badge.svg)](https://github.com/avdept/JellyBoxPlayer/actions)
-[![Latest release](https://img.shields.io/github/v/release/avdept/JellyBoxPlayer)](https://github.com/avdept/JellyBoxPlayer/releases/latest)
-[![GitHub downloads](https://img.shields.io/github/downloads/avdept/JellyBoxPlayer/total?logo=github&logoColor=white&label=downloads)](https://github.com/avdept/JellyBoxPlayer/releases)
+[![Build Status](https://github.com/Nreel/JellyBoxPlayer/actions/workflows/tests.yaml/badge.svg)](https://github.com/Nreel/JellyBoxPlayer/actions)
+[![Latest release](https://img.shields.io/github/v/release/Nreel/JellyBoxPlayer)](https://github.com/Nreel/JellyBoxPlayer/releases/latest)
+[![GitHub downloads](https://img.shields.io/github/downloads/Nreel/JellyBoxPlayer/total?logo=github&logoColor=white&label=downloads)](https://github.com/Nreel/JellyBoxPlayer/releases)
 [![License: AGPL v3](https://img.shields.io/badge/license-AGPL--3.0-blue)](./LICENSE)
-[![Stars](https://img.shields.io/github/stars/avdept/JellyBoxPlayer?style=flat)](https://github.com/avdept/JellyBoxPlayer/stargazers)
-[![Follow @_avdept](https://img.shields.io/badge/@__avdept-000000?logo=x&logoColor=white)](https://x.com/_avdept)
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy_Me_A_Coffee-FFDD00?logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/avdept)
+[![Stars](https://img.shields.io/github/stars/Nreel/JellyBoxPlayer?style=flat)](https://github.com/Nreel/JellyBoxPlayer/stargazers)
 
 [Download](#download) · [Screenshots](#screenshots) · [Features](#features) · [Development](#development)
 
@@ -26,7 +24,7 @@
 
 ---
 
-JellyBox is a music client for [Jellyfin](https://jellyfin.org), [Emby](https://emby.media) and [Navidrome](https://www.navidrome.org) (any OpenSubsonic-compatible server can be tried, but only Navidrome is tested). It focuses on doing one thing well: making your own music library feel like a modern streaming app - fast browsing, offline downloads and progressive caching, lyrics, spotify-like everyday playlists along with a UI built for each platform rather than a single stretched layout.
+JellyBox is a music client for [Jellyfin](https://jellyfin.org), [Emby](https://emby.media) and [Navidrome](https://www.navidrome.org) (any OpenSubsonic-compatible server can be tried, but only Navidrome is tested). It focuses on doing one thing well: making your own music library feel like a modern streaming app - fast browsing, offline downloads and progressive caching, lyrics, spotify-like everyday playlists, playback continuity between your devices through your own Jellybox Cloud server, along with a UI built for each platform rather than a single stretched layout.
 
 > [!IMPORTANT]
 > JellyBox is a client, not a server. You need access to a running Jellyfin, Emby or Navidrome server with a music library on it.
@@ -35,12 +33,10 @@ JellyBox is a music client for [Jellyfin](https://jellyfin.org), [Emby](https://
 
 | Platform | Format | |
 |---|---|---|
-| **iOS / iPadOS / macOS**  | App Store | [![App Store](https://img.shields.io/badge/App_Store-0D96F6?logo=apple&logoColor=white)](https://apps.apple.com/us/app/jellybox-player/id6469732117) |
-| **macOS** | `.dmg` (signed & notarized) | [Latest release](https://github.com/avdept/JellyBoxPlayer/releases/latest) |
-| **Windows** | Installer `.exe` or portable `.zip` | [Latest release](https://github.com/avdept/JellyBoxPlayer/releases/latest) |
-| **Linux** | `.AppImage`, `.deb`, `.rpm` or `.tar.gz` bundle (x64 & arm64) | [Latest release](https://github.com/avdept/JellyBoxPlayer/releases/latest) |
-| **Android** | Google Play | [![Google Play](https://img.shields.io/badge/Google_Play-414141?logo=googleplay&logoColor=white)](https://play.google.com/store/apps/details?id=com.prodigytech.jellybox) |
-| **Android** | `.apk` (sideload) | [Latest release](https://github.com/avdept/JellyBoxPlayer/releases/latest) |
+| **macOS** | `.dmg` (signed & notarized) | [Latest release](https://github.com/Nreel/JellyBoxPlayer/releases/latest) |
+| **Windows** | Installer `.exe` or portable `.zip` | [Latest release](https://github.com/Nreel/JellyBoxPlayer/releases/latest) |
+| **Linux** | `.AppImage`, `.deb`, `.rpm` or `.tar.gz` bundle (x64 & arm64) | [Latest release](https://github.com/Nreel/JellyBoxPlayer/releases/latest) |
+| **Android** | `.apk` (sideload) | [Latest release](https://github.com/Nreel/JellyBoxPlayer/releases/latest) |
 
 ## Screenshots
 
@@ -135,6 +131,7 @@ JellyBox is a music client for [Jellyfin](https://jellyfin.org), [Emby](https://
 
 **Playback**
 - [x] Playback memory - app remembers your queue and playback position between restarts
+- [x] Jellybox Cloud continuity - hand off playback between your devices through your own continuity server, reachable over the home or a remote address; disconnect inline in Settings
 - [x] Time-synced lyrics overlay
 - [x] Queue management with shuffle, repeat and a randomised "surprise me" queue
 - [x] Per-connection streaming profiles with automatic transcoding when a codec isn't supported natively
@@ -172,7 +169,7 @@ The installer is unsigned, so SmartScreen will warn on first run - choose **More
 
 ### Android
 
-Install from [Google Play](https://play.google.com/store/apps/details?id=com.prodigytech.jellybox), or sideload the APK from the [releases page](https://github.com/avdept/JellyBoxPlayer/releases). For the APK you'll need to allow installs from your browser or file manager.
+Sideload the APK from the [releases page](https://github.com/Nreel/JellyBoxPlayer/releases). For the APK you'll need to allow installs from your browser or file manager.
 
 ### Linux
 
@@ -189,7 +186,7 @@ Note: Recently I bundled libs with app, but I need more folks to actually test i
 **Prerequisites** - [Flutter](https://docs.flutter.dev/get-started/install) with Dart SDK 3.8 or newer, plus the toolchain for whichever platform you're targeting (Xcode, Android Studio, or the Linux packages above).
 
 ```bash
-git clone https://github.com/avdept/JellyBoxPlayer.git
+git clone https://github.com/Nreel/JellyBoxPlayer.git
 cd JellyBoxPlayer
 
 flutter pub get
@@ -208,4 +205,4 @@ Bug reports, feature requests and pull requests are all welcome - see [CONTRIBUT
 
 ## License
 
-[GNU AGPL-3.0](./LICENSE) © ProdigyTech Inc.
+[GNU AGPL-3.0](./LICENSE)

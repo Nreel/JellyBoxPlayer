@@ -16,7 +16,7 @@ final lrclibClientProvider = Provider<LrclibClient>(
 );
 
 String _userAgent() {
-  const project = 'https://github.com/avdept/JellyBoxPlayer';
+  const project = 'https://github.com/Nreel/JellyBoxPlayer';
   try {
     return 'JellyBox v${appInfo.version} ($project)';
   } catch (_) {

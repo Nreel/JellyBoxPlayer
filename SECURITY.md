@@ -4,7 +4,7 @@ JellyBox is an unofficial audio client for Jellyfin, available on macOS, iOS, an
 
 ## Supported Versions
 
-Only the latest released version of JellyBox receives security fixes. Older releases are not patched retroactively — please update to the most recent version from the [App Store](https://apps.apple.com/us/app/jellybox-player/id6469732117) or the [GitHub releases page](https://github.com/avdept/JellyBoxPlayer/releases) before reporting an issue, and confirm it still reproduces there.
+Only the latest released version of JellyBox receives security fixes. Older releases are not patched retroactively — please update to the most recent version from the [GitHub releases page](https://github.com/Nreel/JellyBoxPlayer/releases) before reporting an issue, and confirm it still reproduces there.
 
 | Version        | Supported          |
 | -------------- | ------------------ |
@@ -17,8 +17,8 @@ Only the latest released version of JellyBox receives security fixes. Older rele
 
 Instead, use one of these private channels:
 
-1. **GitHub private vulnerability reporting (preferred):** Go to the repository's [Security tab](https://github.com/avdept/JellyBoxPlayer/security) and click "Report a vulnerability". This keeps the report private between you and the maintainer.
-2. **Direct contact:** If you cannot use GitHub's reporting flow, reach out via the contact details on the maintainer's GitHub profile ([@avdept](https://github.com/avdept)) to arrange a private channel.
+1. **GitHub private vulnerability reporting (preferred):** Go to the repository's [Security tab](https://github.com/Nreel/JellyBoxPlayer/security) and click "Report a vulnerability". This keeps the report private between you and the maintainer.
+2. **Direct contact:** If you cannot use GitHub's reporting flow, reach out via the contact details on the maintainer's GitHub profile ([@Nreel](https://github.com/Nreel)) to arrange a private channel.
 
 ### What to include
 

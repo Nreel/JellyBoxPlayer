@@ -4,7 +4,7 @@
 1. Fork the repository on GitHub.
 2. Clone your fork locally:
    ```
-   git clone https://github.com/avdept/jellyboxplayer.git
+   git clone https://github.com/Nreel/JellyBoxPlayer.git
    ```
 3. Create a new branch for your contribution:
    ```
@@ -50,7 +50,7 @@ home_screen_widgets modules) need Built-in Kotlin support first.
    ```
    git push origin feature/your-feature-name
    ```
-2. Go to the original repository on GitHub and create a new pull request.
+2. Go to the repository on GitHub and create a new pull request against `main`.
 3. Provide a clear description of your changes in the pull request.
 
 ## Code Style
