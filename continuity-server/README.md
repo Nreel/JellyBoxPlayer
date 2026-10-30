@@ -10,12 +10,11 @@ revoked tokens survive a restart.
 ## Setup
 
 1. **Deploy the server.** No clone needed — the image is rebuilt by CI on every
-   change to `continuity-server/`. One command:
+   change to `continuity-server/`. One line, works in bash, PowerShell and cmd
+   (`\` continuations are bash-only):
 
    ```bash
-   docker run -d --name jellybox-continuity --restart unless-stopped \
-     --cpus=1.5 -p 8000:8000 -e CONTINUITY_DB=/data/continuity.db \
-     -v continuity-data:/data ghcr.io/nreel/jellybox-continuity:latest
+   docker run -d --name jellybox-continuity --restart unless-stopped --cpus=1.5 -p 8000:8000 -e CONTINUITY_DB=/data/continuity.db -v continuity-data:/data ghcr.io/nreel/jellybox-continuity:latest
    ```
 
    Or with compose, from this repository's `docker-compose.yml`:
