@@ -9,6 +9,10 @@ services:
     volumes:
       - continuity-data:/data
     restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
     healthcheck:
       test:
         - CMD

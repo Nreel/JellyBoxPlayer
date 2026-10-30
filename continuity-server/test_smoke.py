@@ -160,6 +160,23 @@ async def run(port: int) -> None:
     check(state["doc"]["itemIds"] == ["s1", "s2", "s3"], "doc reaches the peer")
     check(state["doc"]["trackPositionMs"] == 42000, "position is relayed")
 
+    print("state fan-out is coalesced")
+    server_main.STATE_BROADCAST_INTERVAL_MS = 400
+    phone.drain()
+    desktop.drain()
+    for position_ms in (1000, 2000, 3000):
+        await phone.send(type="state", doc={**doc, "trackPositionMs": position_ms})
+    await asyncio.sleep(0.1)
+    check(
+        not any(m.get("type") == "state" for m in desktop.inbox),
+        "ticks inside the interval are folded",
+    )
+    await asyncio.sleep(0.5)
+    folded = [m for m in desktop.inbox if m.get("type") == "state"]
+    check(len(folded) == 1, "one trailing broadcast carries the ticks")
+    check(folded[0]["doc"]["trackPositionMs"] == 3000, "the newest position wins")
+    server_main.STATE_BROADCAST_INTERVAL_MS = 250
+
     print("non-renderer state is ignored")
     await desktop.send(type="state", doc={**doc, "itemIds": ["bogus"]})
     await asyncio.sleep(0.2)

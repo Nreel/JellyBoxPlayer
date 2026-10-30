@@ -28,6 +28,16 @@ resets the server.
 | `CONTINUITY_DB` | `continuity.db` next to `main.py` | SQLite file for users and credentials |
 | `CONTINUITY_SESSION_TTL` | `43200` | Admin web session lifetime in seconds |
 | `CONTINUITY_COOKIE_SECURE` | off | Set to `1` when serving the UI over HTTPS |
+| `CONTINUITY_STATE_INTERVAL_MS` | `250` | Shortest spacing between state broadcasts to peers |
+
+State fan-out is the server's main CPU cost: each published queue is serialised
+once and sent to every peer in the session. Publishes that arrive closer than
+`CONTINUITY_STATE_INTERVAL_MS` are folded into one trailing broadcast, so a
+device ticking every playback change cannot fan a large queue out several times
+a second; peers lag the renderer by at most that interval. The app publishes at
+most one state per 250 ms, sends queue changes immediately, and reconnects with
+exponential backoff (5 s up to 30 s). `docker-compose.yml` caps the container at
+1.5 CPUs so a busy relay cannot starve the host.
 
 ## Users and credentials
 

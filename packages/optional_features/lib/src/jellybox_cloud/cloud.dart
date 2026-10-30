@@ -111,7 +111,13 @@ class JellyboxCloud<S> {
   static const accountStorageKey = 'continuity_account';
 
   static const _handoffTimeout = Duration(seconds: 15);
-  static const _reconnectDelay = Duration(seconds: 5);
+  // Reconnection backs off exponentially: a server that is restarting, or an
+  // account whose token was revoked, must not be hammered every few seconds.
+  static const _reconnectBaseDelay = Duration(seconds: 5);
+  static const _reconnectMaxDelay = Duration(seconds: 30);
+  // Playback ticks arrive several times a second and only move the position;
+  // peers need the newest doc, so publishes are folded into one per interval.
+  static const _publishMinInterval = Duration(milliseconds: 250);
 
   final CloudHost<S> _host;
   final _stateController = StreamController<CloudState>.broadcast();
@@ -122,6 +128,11 @@ class JellyboxCloud<S> {
   Completer<bool>? _signInCompleter;
   Timer? _reconnectTimer;
   Timer? _handoffTimer;
+  Duration _reconnectDelay = _reconnectBaseDelay;
+  Timer? _publishTimer;
+  CloudPlayback? _pendingPublish;
+  String? _lastPublishSig;
+  DateTime? _lastPublishAt;
   ContinuityAccount? _account;
   String? _serverUrl;
   bool _observing = false;
@@ -262,6 +273,9 @@ class JellyboxCloud<S> {
   Future<void> _disconnectNow() async {
     _reconnectTimer?.cancel();
     _reconnectTimer = null;
+    _publishTimer?.cancel();
+    _publishTimer = null;
+    _pendingPublish = null;
     _observing = false;
     final channel = _channel;
     _channel = null;
@@ -518,6 +532,8 @@ class JellyboxCloud<S> {
   }
 
   void _handleRegistered() {
+    // A live connection ends the backoff; a dropped one starts it again.
+    _reconnectDelay = _reconnectBaseDelay;
     _setState(
       _state.copyWith(status: ConductorStatus.listening, clearError: true),
     );
@@ -528,8 +544,8 @@ class JellyboxCloud<S> {
   void _startObservingPlayback() {
     unawaited(_playbackSubscription?.cancel());
     _playbackSubscription = _host.playbackChanges.listen((playback) {
-      if (playback == null || !_shouldPublish) return;
-      _send({'type': 'state', 'doc': _playbackToDoc(playback)});
+      if (playback == null) return;
+      _publishPlayback(playback);
     });
   }
 
@@ -546,10 +562,58 @@ class JellyboxCloud<S> {
     'sourceId': playback.sourceId,
   };
 
+  /// Publishes playback state, folding rapid position ticks into one trailing
+  /// send. Shape changes (queue, mode, volume) go out immediately.
+  void _publishPlayback(CloudPlayback playback) {
+    if (!_shouldPublish) return;
+    final sig = _publishSignature(playback);
+    final now = DateTime.now();
+    final since = _lastPublishAt == null ? null : now.difference(_lastPublishAt!);
+    if (sig != _lastPublishSig || since == null || since >= _publishMinInterval) {
+      _publishTimer?.cancel();
+      _publishTimer = null;
+      _pendingPublish = null;
+      _lastPublishSig = sig;
+      _lastPublishAt = now;
+      _send({'type': 'state', 'doc': _playbackToDoc(playback)});
+      return;
+    }
+    _pendingPublish = playback;
+    _publishTimer ??= Timer(_publishMinInterval - since, _flushPendingPublish);
+  }
+
+  void _flushPendingPublish() {
+    _publishTimer = null;
+    final playback = _pendingPublish;
+    _pendingPublish = null;
+    if (playback == null || !_shouldPublish) return;
+    _lastPublishSig = _publishSignature(playback);
+    _lastPublishAt = DateTime.now();
+    _send({'type': 'state', 'doc': _playbackToDoc(playback)});
+  }
+
+  /// Everything but the playback position: only a tick may be folded, so a
+  /// queue, mode, or volume change never waits for the throttle.
+  String _publishSignature(CloudPlayback playback) => [
+    _host.backendRef,
+    playback.albumId,
+    playback.itemIds.length,
+    playback.index,
+    playback.playing,
+    playback.shuffle,
+    playback.repeat,
+    playback.volume,
+  ].join('|');
+
   void _sendCurrentState() {
     if (!_shouldPublish) return;
     final playback = _host.playback;
     if (playback == null) return;
+    _publishTimer?.cancel();
+    _publishTimer = null;
+    _pendingPublish = null;
+    _lastPublishSig = _publishSignature(playback);
+    _lastPublishAt = DateTime.now();
     _send({'type': 'state', 'doc': _playbackToDoc(playback)});
   }
 
@@ -771,6 +835,12 @@ class JellyboxCloud<S> {
       if (_disposed || _channel != null) return;
       unawaited(_connect(_serverUrl!));
     });
+    _reconnectDelay = Duration(
+      milliseconds: (_reconnectDelay.inMilliseconds * 2).clamp(
+        _reconnectBaseDelay.inMilliseconds,
+        _reconnectMaxDelay.inMilliseconds,
+      ),
+    );
   }
 
   Future<void> _loadAccount() async {

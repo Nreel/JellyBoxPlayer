@@ -50,6 +50,7 @@ Admin HTTP API (session cookie, JSON bodies):
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import time
 from pathlib import Path
@@ -72,6 +73,14 @@ DB_PATH = os.environ.get("CONTINUITY_DB", str(Path(__file__).with_name("continui
 SESSION_TTL_SECONDS = int(os.environ.get("CONTINUITY_SESSION_TTL", 12 * 60 * 60))
 COOKIE_SECURE = os.environ.get("CONTINUITY_COOKIE_SECURE", "").lower() in {"1", "true", "yes"}
 
+# State fan-out is the server's dominant CPU cost: every published doc is
+# re-encoded and sent to each peer. A playback tick only moves trackPositionMs,
+# so broadcasts are coalesced to one per interval and the newest doc always
+# wins. Peers never lag behind the renderer by more than this interval.
+STATE_BROADCAST_INTERVAL_MS = int(
+    os.environ.get("CONTINUITY_STATE_INTERVAL_MS", 250)
+)
+
 app = FastAPI(title="Local JellyBox Continuity Server")
 store = Store(DB_PATH)
 tokens = SessionTokens(store.secret, SESSION_TTL_SECONDS)
@@ -93,6 +102,34 @@ class SessionDoc(BaseModel):
     def is_empty(self) -> bool:
         return not self.itemIds
 
+    @classmethod
+    def from_wire(cls, raw: Any) -> "SessionDoc":
+        """Build a doc from a wire payload without validating every field.
+
+        A queue can hold tens of thousands of item ids, and a device publishes
+        on every playback tick; validating the whole model per tick costs more
+        than relaying it. Malformed payloads still raise, so the handler can
+        answer with an error instead of broadcasting garbage.
+        """
+        if not isinstance(raw, dict):
+            raise ValueError("doc must be an object")
+        item_ids = raw.get("itemIds") or []
+        if not isinstance(item_ids, list):
+            raise ValueError("doc.itemIds must be a list")
+        volume = raw.get("volume")
+        return cls.model_construct(
+            backendRef=raw.get("backendRef"),
+            albumId=raw.get("albumId"),
+            itemIds=[str(item) for item in item_ids],
+            queuePosition=int(raw.get("queuePosition") or 0),
+            trackPositionMs=int(raw.get("trackPositionMs") or 0),
+            playing=bool(raw.get("playing")),
+            shuffle=bool(raw.get("shuffle")),
+            repeat=str(raw.get("repeat") or "off"),
+            volume=1.0 if volume is None else float(volume),
+            sourceId=raw.get("sourceId"),
+        )
+
 
 class DeviceInfo(BaseModel):
     id: str
@@ -111,6 +148,9 @@ class SessionState:
         self.active_renderer: Optional[str] = None
         self.connections: Dict[str, WebSocket] = {}
         self.pending_handoff: Optional[Dict[str, str]] = None
+        # Coalescing bookkeeping for state broadcasts (see publish_state).
+        self.last_state_ms = 0.0
+        self.flush_task: Optional[asyncio.Task] = None
 
     def device_list(self) -> List[Dict[str, Any]]:
         result = []
@@ -138,14 +178,16 @@ class SessionState:
 
 sessions: Dict[str, SessionState] = {}
 
-# id(websocket) -> (credential id, websocket). Used to close sockets promptly
-# when an administrator revokes the credential they signed in with.
-active_credentials: Dict[int, Tuple[str, WebSocket]] = {}
+# websocket -> credential id. Used to close sockets promptly when an
+# administrator revokes the credential they signed in with. Keyed by the socket
+# itself: id(websocket) can be reused after a socket is garbage-collected, and
+# a recycled id would close an unrelated connection.
+active_credentials: Dict[WebSocket, str] = {}
 
 
 async def send(ws: WebSocket, message: Dict[str, Any]) -> bool:
     try:
-        await ws.send_json(message)
+        await ws.send_text(json.dumps(message))
         return True
     except Exception:
         return False
@@ -156,21 +198,81 @@ async def broadcast(
     message: Dict[str, Any],
     exclude: Optional[str] = None,
 ) -> None:
+    """Send one message to every peer in a session.
+
+    The payload is encoded once and reused, so a large queue costs one
+    serialisation no matter how many devices are listening.
+    """
     state = sessions.get(session_key)
     if not state:
         return
-    for device_id, ws in list(state.connections.items()):
-        if device_id == exclude:
-            continue
-        if not await send(ws, message):
+    targets = [
+        (device_id, ws)
+        for device_id, ws in list(state.connections.items())
+        if device_id != exclude
+    ]
+    if not targets:
+        return
+    payload = json.dumps(message)
+    for device_id, ws in targets:
+        try:
+            await ws.send_text(payload)
+        except Exception:
             state.remove_device(device_id)
 
 
 async def broadcast_state(session_key: str, exclude: Optional[str] = None) -> None:
+    """Broadcast the session snapshot immediately (device list / handoff)."""
     state = sessions.get(session_key)
     if not state:
         return
+    state.last_state_ms = time.monotonic()
     await broadcast(session_key, {"type": "state", **state.snapshot()}, exclude)
+
+
+async def publish_state(session_key: str, exclude: Optional[str] = None) -> None:
+    """Broadcast the session snapshot, coalescing rapid publishes.
+
+    Publishes closer together than STATE_BROADCAST_INTERVAL_MS are folded into
+    one trailing broadcast, so a device ticking every playback change cannot
+    fan a full queue out to every peer several times per second.
+    """
+    state = sessions.get(session_key)
+    if not state:
+        return
+    now = time.monotonic()
+    elapsed_ms = (now - state.last_state_ms) * 1000
+    if elapsed_ms >= STATE_BROADCAST_INTERVAL_MS:
+        state.last_state_ms = now
+        await broadcast_state(session_key, exclude)
+        return
+    if state.flush_task is None:
+        state.flush_task = asyncio.create_task(
+            _flush_state(
+                session_key,
+                (STATE_BROADCAST_INTERVAL_MS - elapsed_ms) / 1000,
+                exclude,
+            )
+        )
+
+
+async def _flush_state(
+    session_key: str, delay: float, exclude: Optional[str]
+) -> None:
+    await asyncio.sleep(delay)
+    state = sessions.get(session_key)
+    if state is None:
+        return
+    state.flush_task = None
+    await broadcast_state(session_key, exclude)
+
+
+def _forget_session(session_key: str, state: SessionState) -> None:
+    """Drop a session and cancel any broadcast it still has queued."""
+    if state.flush_task is not None:
+        state.flush_task.cancel()
+        state.flush_task = None
+    sessions.pop(session_key, None)
 
 
 @app.get("/health")
@@ -199,14 +301,18 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             if msg_type == "signin":
                 login = str(data.get("login") or "").strip()
                 password = str(data.get("password") or "")
-                user = store.authenticate_password(login, password)
+                # scrypt costs tens of milliseconds; run it in a worker thread
+                # so a sign-in cannot stall the relay.
+                user = await asyncio.to_thread(
+                    store.authenticate_password, login, password
+                )
                 if user is None or user["disabled"]:
                     await send(
                         websocket,
                         {"type": "error", "message": "Invalid login or password."},
                     )
                     continue
-                _, token = store.ensure_app_credential(user["id"])
+                _, token = await asyncio.to_thread(store.ensure_app_credential, user["id"])
                 await send(
                     websocket,
                     {
@@ -244,7 +350,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     continue
                 credential_id = store.credential_id_for_token(token)
                 if credential_id is not None:
-                    active_credentials[id(websocket)] = (credential_id, websocket)
+                    active_credentials[websocket] = credential_id
                 user_id = user["id"]
                 backend_ref = data.get("backend_ref")
                 new_session_key = (
@@ -263,7 +369,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         if old.devices:
                             await broadcast_state(session_key or "")
                         else:
-                            sessions.pop(session_key or "", None)
+                            _forget_session(session_key or "", old)
                 device_id = new_device_id
                 session_key = new_session_key
 
@@ -300,9 +406,9 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         "session_key": session_key,
                     },
                 )
-                await send(websocket, {"type": "state", **state.snapshot()})
-                # Peers need to learn about this device too.
-                await broadcast_state(session_key, exclude=device_id)
+                # One snapshot for every socket in the session: the registering
+                # device needs its peers, and the peers need this device.
+                await broadcast_state(session_key)
 
             elif msg_type == "unregister":
                 if session_key and session_key in sessions:
@@ -311,7 +417,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     if state.devices:
                         await broadcast_state(session_key)
                     else:
-                        sessions.pop(session_key, None)
+                        _forget_session(session_key, state)
                 device_id = None
                 session_key = None
 
@@ -320,7 +426,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     continue
                 state = sessions[session_key]
                 try:
-                    doc = SessionDoc(**data.get("doc", {}))
+                    doc = SessionDoc.from_wire(data.get("doc", {}))
                 except Exception as exc:
                     await send(websocket, {"type": "error", "message": str(exc)})
                     continue
@@ -328,10 +434,13 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                     state.doc = doc
                     if doc.playing:
                         state.active_renderer = device_id
+                    # Election lands immediately; later publishes are coalesced.
                     await broadcast_state(session_key)
                 elif state.active_renderer == device_id:
                     state.doc = doc
-                    await broadcast_state(session_key, exclude=device_id)
+                    # Playback ticks only move trackPositionMs; fan them out at
+                    # most once per interval, so peers lag at most that long.
+                    await publish_state(session_key, exclude=device_id)
 
             elif msg_type == "claim":
                 if not session_key or session_key not in sessions or not device_id:
@@ -460,7 +569,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     except Exception as exc:
         await send(websocket, {"type": "error", "message": str(exc)})
     finally:
-        active_credentials.pop(id(websocket), None)
+        active_credentials.pop(websocket, None)
         if session_key and session_key in sessions:
             state = sessions[session_key]
             # A newer socket may already have replaced this one.
@@ -469,7 +578,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                 if state.devices:
                     await broadcast_state(session_key)
                 else:
-                    sessions.pop(session_key, None)
+                    _forget_session(session_key, state)
 
 
 # ---------------------------------------------------------------------------
@@ -595,7 +704,9 @@ async def api_setup(request: Request, body: SetupRequest, response: Response) ->
     if store.has_admin():
         raise HTTPException(status_code=409, detail="Setup has already been completed.")
     try:
-        user = store.create_first_admin(body.login, body.password, body.name)
+        user = await asyncio.to_thread(
+            store.create_first_admin, body.login, body.password, body.name
+        )
     except StoreError as exc:
         raise _error(exc) from exc
     _set_cookie(response, user["id"])
@@ -608,7 +719,7 @@ async def api_login(request: Request, body: LoginRequest, response: Response) ->
         raise HTTPException(
             status_code=429, detail="Too many attempts. Try again in a few minutes."
         )
-    user = store.authenticate_password(body.login, body.password)
+    user = await asyncio.to_thread(store.authenticate_password, body.login, body.password)
     if user is None or user["disabled"]:
         _record_attempt(request, False)
         raise HTTPException(status_code=401, detail="Invalid login or password.")
@@ -636,7 +747,9 @@ async def api_create_user(
     body: UserCreateRequest, _: Dict[str, Any] = Depends(_admin_user)
 ) -> Dict[str, Any]:
     try:
-        user = store.create_user(body.login, body.password, body.name, body.isAdmin)
+        user = await asyncio.to_thread(
+            store.create_user, body.login, body.password, body.name, body.isAdmin
+        )
     except StoreError as exc:
         raise _error(exc) from exc
     return {"user": user}
@@ -649,7 +762,8 @@ async def api_update_user(
     admin: Dict[str, Any] = Depends(_admin_user),
 ) -> Dict[str, Any]:
     try:
-        user = store.update_user(
+        user = await asyncio.to_thread(
+            store.update_user,
             user_id,
             login=body.login,
             name=body.name,
@@ -743,18 +857,19 @@ async def api_sessions(_: Dict[str, Any] = Depends(_admin_user)) -> Dict[str, An
 
 def _drop_user_sessions(user_id: str) -> None:
     for key in [k for k in sessions if k == user_id or k.startswith(f"{user_id}:")]:
-        state = sessions.pop(key, None)
+        state = sessions.get(key)
         if state is None:
             continue
+        _forget_session(key, state)
         for ws in list(state.connections.values()):
             _close_soon(ws, "account removed")
 
 
 def _drop_credential_sessions(credential_id: str) -> None:
     """Close sockets that registered with a revoked or deleted credential."""
-    for socket_id, (owner, ws) in list(active_credentials.items()):
+    for ws, owner in list(active_credentials.items()):
         if owner == credential_id:
-            active_credentials.pop(socket_id, None)
+            active_credentials.pop(ws, None)
             _close_soon(ws, "credential revoked")
 
 

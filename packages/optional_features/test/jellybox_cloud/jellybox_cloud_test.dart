@@ -590,6 +590,83 @@ void main() {
     expect(server.ofType('state'), isEmpty);
   });
 
+  test('rapid position ticks fold into one publish', () async {
+    await cloud.signIn(
+      address: server.url.toString(),
+      login: 'me@example.com',
+      password: 'secret',
+    );
+    await settle();
+    server.received.clear();
+
+    host.current = const CloudPlayback(
+      itemIds: ['s1'],
+      index: 0,
+      position: Duration.zero,
+      playing: true,
+    );
+    host.emit(host.current);
+    await settle();
+    expect(server.ofType('state').length, 1, reason: 'the first publish goes out');
+    server.received.clear();
+
+    for (final ms in [50, 100, 150]) {
+      host.current = CloudPlayback(
+        itemIds: const ['s1'],
+        index: 0,
+        position: Duration(milliseconds: ms),
+        playing: true,
+      );
+      host.emit(host.current);
+    }
+    expect(server.ofType('state'), isEmpty, reason: 'ticks inside the interval wait');
+
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    final folded = server.ofType('state').toList();
+    expect(folded.length, 1, reason: 'the interval emits one trailing publish');
+    expect(
+      (folded.single['doc'] as Map<String, dynamic>)['trackPositionMs'],
+      150,
+      reason: 'the newest position wins',
+    );
+  });
+
+  test('a queue change publishes immediately', () async {
+    await cloud.signIn(
+      address: server.url.toString(),
+      login: 'me@example.com',
+      password: 'secret',
+    );
+    await settle();
+    server.received.clear();
+
+    host.current = const CloudPlayback(
+      itemIds: ['s1'],
+      index: 0,
+      position: Duration.zero,
+      playing: true,
+    );
+    host.emit(host.current);
+    await settle();
+    server.received.clear();
+
+    host.current = const CloudPlayback(
+      itemIds: ['s1', 's2'],
+      index: 1,
+      position: Duration(milliseconds: 20),
+      playing: true,
+    );
+    host.emit(host.current);
+    await settle();
+
+    final published = server.ofType('state').toList();
+    expect(published.length, 1, reason: 'a queue change does not wait');
+    expect(
+      (published.single['doc'] as Map<String, dynamic>)['itemIds'],
+      ['s1', 's2'],
+    );
+  });
+
   test('dispose closes the socket and ignores late messages', () async {
     await cloud.signIn(
       address: server.url.toString(),
