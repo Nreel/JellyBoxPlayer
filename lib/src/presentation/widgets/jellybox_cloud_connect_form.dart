@@ -79,7 +79,7 @@ class _JellyboxCloudConnectFormState
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const ModalFormHeader('Jellybox Cloud'),
+          const ModalFormHeader('Continuity Server'),
           const SizedBox(height: 8),
 
           if (account != null && !_submitting) ...[
