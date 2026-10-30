@@ -1,5 +1,8 @@
 services:
   continuity:
+    # Prebuilt by CI (.github/workflows/continuity-image.yaml); `build: .`
+    # stays as a fallback for local edits.
+    image: ghcr.io/nreel/jellybox-continuity:latest
     build: .
     container_name: jellybox-continuity
     ports:

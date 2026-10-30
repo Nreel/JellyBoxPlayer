@@ -9,22 +9,23 @@ revoked tokens survive a restart.
 
 ## Setup
 
-1. **Clone the repository.** The server ships in this repo; nothing else
-   installs it:
+1. **Deploy the server.** No clone needed — the image is rebuilt by CI on every
+   change to `continuity-server/`. One command:
 
    ```bash
-   git clone https://github.com/Nreel/JellyBoxPlayer.git
+   docker run -d --name jellybox-continuity --restart unless-stopped \
+     --cpus=1.5 -p 8000:8000 -e CONTINUITY_DB=/data/continuity.db \
+     -v continuity-data:/data ghcr.io/nreel/jellybox-continuity:latest
    ```
 
-2. **Start the server.** With Docker (recommended):
+   Or with compose, from this repository's `docker-compose.yml`:
 
    ```bash
-   cd JellyBoxPlayer/continuity-server
-   docker compose up --build -d
+   docker compose up -d
    ```
 
-   Or run it directly, without a container, on Python 3.12+, from the same
-   directory:
+   Or run it directly, without a container, on Python 3.12+ — clone the
+   repository, then from `continuity-server/`:
 
    ```bash
    pip install -r requirements.txt
@@ -32,21 +33,21 @@ revoked tokens survive a restart.
    ```
 
    The relay listens on `http://<machine-ip>:8000` - WebSocket endpoint `/ws`,
-   admin UI `/admin`. The compose service health-checks `/health`, restarts on
-   boot and keeps accounts in the `continuity-data` volume; deleting that volume
+   admin UI `/admin`. The container health-checks `/health`, restarts on boot
+   and keeps accounts in the `continuity-data` volume; deleting that volume
    resets the server.
 
-3. **Create the administrator.** Open `http://<machine-ip>:8000/admin` on first
+2. **Create the administrator.** Open `http://<machine-ip>:8000/admin` on first
    run and create the first admin there - there is no default account or password.
 
-4. **Create a user.** In the admin UI add a user with a **login** (not an email)
+3. **Create a user.** In the admin UI add a user with a **login** (not an email)
    and a password. This is the identity your JellyBox devices sign in with
    (see [Users and credentials](#users-and-credentials)).
 
-5. **Point the app at the server.** In JellyBox open
+4. **Point the app at the server.** In JellyBox open
    **Settings → Connections → Continuity server** → Connect, enter all fields(Continuity server adress, Login, Password). Server is
    `http://<machine-ip>:8000` (`http://localhost:8000` when the app runs on the
-   same machine), login and password from step 4.
+   same machine), login and password from step 3.
 
    
    The address is stored as the `conductor_url` preference in every build.
@@ -59,7 +60,7 @@ revoked tokens survive a restart.
 
    If the define is omitted the first launch defaults to `http://localhost:8000`.
 
-6. **Optional: reach the server away from home.** Add a Remote address (Tailscale,
+5. **Optional: reach the server away from home.** Add a Remote address (Tailscale,
    WireGuard or reverse proxy) in the same settings section - stored as
    `conductor_remote_url`. The app keeps using the home address while it answers
    and switches to the remote one when it does not, so a device away from the
