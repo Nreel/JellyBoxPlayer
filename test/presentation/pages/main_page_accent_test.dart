@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import 'package:jplayer/generated/l10n.dart';
 import 'package:jplayer/main.dart';
 import 'package:jplayer/src/data/providers/shared_preferences_provider.dart';
-import 'package:jplayer/src/domain/providers/update_banner_provider.dart';
 import 'package:jplayer/src/presentation/pages/main_page.dart';
 import 'package:jplayer/src/presentation/themes/themes.dart';
 import 'package:jplayer/src/presentation/widgets/custom_navigation_rail.dart';
@@ -91,8 +90,6 @@ void main() {
           overrides: [
             sharedPreferencesProvider.overrideWith((_) => prefs),
             connectivityProvider.overrideWith((_) => _FakeConn(true)),
-            // availableUpdateProvider schedules a polling Timer; bypass it.
-            visibleUpdateProvider.overrideWith((_) => null),
           ],
         ),
         child: MaterialApp.router(

@@ -120,8 +120,7 @@ class _MainPageState extends ConsumerState<MainPage> {
     final currentIndex = widget.shell.currentIndex;
     final isOffline = ref.watch(isOfflineProvider);
     final pluginNotice = ref.watch(visiblePluginNoticeProvider);
-    final update = ref.watch(visibleUpdateProvider);
-    final hasBanner = isOffline || pluginNotice != null || update != null;
+    final hasBanner = isOffline || pluginNotice != null;
     final sidebarCollapsed = ref.watch(
       settingProvider(AppSetting.sidebarCollapsed),
     );
@@ -194,9 +193,7 @@ class _MainPageState extends ConsumerState<MainPage> {
                     if (isOffline)
                       const OfflineBanner()
                     else if (pluginNotice != null)
-                      PluginNoticeBanner(notice: pluginNotice)
-                    else if (update != null)
-                      UpdateBanner(update: update),
+                      PluginNoticeBanner(notice: pluginNotice),
                     Expanded(
                       child: Builder(
                         builder: (context) => MediaQuery.removePadding(

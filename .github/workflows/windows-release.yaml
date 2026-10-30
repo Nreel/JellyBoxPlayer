@@ -90,7 +90,6 @@ jobs:
         run: |
           flutter pub get
           flutter build windows --release `
-            --dart-define=JELLYBOX_SIDELOAD=true `
             --build-name=${{ steps.version.outputs.version }} `
             --build-number=${{ steps.version.outputs.build_number }}
 
