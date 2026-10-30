@@ -210,3 +210,7 @@ Bug reports, feature requests and pull requests are all welcome - see [CONTRIBUT
 ## License
 
 [GNU AGPL-3.0](./LICENSE)
+
+---
+
+If you like this fork of JellyBox, you can support its development at [ko-fi.com/nreel](https://ko-fi.com/nreel). ☕
