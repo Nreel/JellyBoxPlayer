@@ -467,21 +467,65 @@ final playingElsewhereProvider = Provider<bool>(
   (ref) => ref.watch(remoteRendererProvider) != null,
 );
 
-final remoteQueueProvider = FutureProvider<List<LibraryItem>>((ref) async {
-  final key = ref.watch(
-    remoteSessionProvider.select((remote) => remote?.doc.itemIds.join(',')),
-  );
-  if (key == null || key.isEmpty) return const [];
+/// Resolves the remote session's queue from a per-id item cache. Re-resolving
+/// a queue whose ids were already fetched (a handoff round-trip back to a
+/// device that mirrored the same queue) completes synchronously, so the UI
+/// never shows an empty queue while the server request is in flight; only ids
+/// never seen before are fetched.
+class _RemoteQueueNotifier extends AsyncNotifier<List<LibraryItem>> {
+  Map<String, LibraryItem> _byId = {};
 
-  final ids = key.split(',');
-  final items = await ref.read(mediaServerClientProvider).getItemsByIds(ids);
-  final byId = {for (final item in items) item.id: item};
-  return [
+  @override
+  Future<List<LibraryItem>> build() async {
+    final key = ref.watch(
+      remoteSessionProvider.select((remote) => remote?.doc.itemIds.join(',')),
+    );
+    if (key == null || key.isEmpty) return const [];
+
+    final ids = key.split(',');
+    final missing = [for (final id in ids) if (!_byId.containsKey(id)) id];
+    if (missing.isEmpty) return _ordered(ids);
+
+    final items = await ref
+        .read(mediaServerClientProvider)
+        .getItemsByIds(missing);
+    for (final item in items) {
+      _byId[item.id] = item;
+    }
+    return _ordered(ids);
+  }
+
+  /// Re-reads the whole queue from the server to pick up user-data changes,
+  /// leaving the cached list on screen until the fresh items land.
+  Future<void> refresh() async {
+    final key = ref.read(
+      remoteSessionProvider.select((remote) => remote?.doc.itemIds.join(',')),
+    );
+    if (key == null || key.isEmpty) return;
+
+    final ids = key.split(',');
+    try {
+      final items = await ref.read(mediaServerClientProvider).getItemsByIds(ids);
+      for (final item in items) {
+        _byId[item.id] = item;
+      }
+      state = AsyncData(_ordered(ids));
+    } on Object {
+      // A failing server leaves the cached queue in place.
+    }
+  }
+
+  List<LibraryItem> _ordered(List<String> ids) => [
     for (final id in ids)
-      byId[id] ??
+      _byId[id] ??
           LibraryItem(id: id, name: 'Unavailable track', kind: ItemKind.song),
   ];
-});
+}
+
+final remoteQueueProvider =
+    AsyncNotifierProvider<_RemoteQueueNotifier, List<LibraryItem>>(
+  _RemoteQueueNotifier.new,
+);
 
 final remoteNowPlayingProvider = Provider<LibraryItem?>((ref) {
   final itemId = ref.watch(

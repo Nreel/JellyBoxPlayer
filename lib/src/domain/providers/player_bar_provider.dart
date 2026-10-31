@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:jplayer/src/domain/models/models.dart';
 import 'package:jplayer/src/domain/providers/cloud_provider.dart';
@@ -180,7 +182,7 @@ class BarControls {
     }
     _ref.invalidate(favouriteSongsProvider);
     markFavouritesChanged(_ref);
-    if (_remote) _ref.invalidate(remoteQueueProvider);
+    if (_remote) unawaited(_ref.read(remoteQueueProvider.notifier).refresh());
     _local.updateSong(
       song.copyWith(userData: song.userData.copyWith(isFavorite: favorite)),
     );
@@ -194,7 +196,7 @@ class BarControls {
     } on Object {
       return false;
     }
-    if (_remote) _ref.invalidate(remoteQueueProvider);
+    if (_remote) unawaited(_ref.read(remoteQueueProvider.notifier).refresh());
     _local.updateSong(
       song.copyWith(userData: song.userData.copyWith(rating: rating)),
     );

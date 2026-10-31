@@ -88,6 +88,69 @@ void main() {
     expect(container.read(remoteNowPlayingProvider)?.id, 'a');
   });
 
+  test('- a queue that returns to the same ids resolves without a refetch', () async {
+    final docProvider = StateProvider<SessionDoc?>((_) => null);
+    final container = createProviderContainer(
+      overrides: [
+        mediaServerClientProvider.overrideWithValue(client),
+        remoteSessionProvider.overrideWith(
+          (ref) => _remote(ref.watch(docProvider) ?? const SessionDoc()),
+        ),
+      ],
+    );
+    when(() => client.getItemsByIds(['a', 'b'])).thenAnswer((_) async => [
+      _song('a'),
+      _song('b'),
+    ]);
+
+    container.read(docProvider.notifier).state = const SessionDoc(
+      itemIds: ['a', 'b'],
+    );
+    final first = await container.read(remoteQueueProvider.future);
+    expect([for (final song in first) song.id], ['a', 'b']);
+
+    // Claiming back to this device empties the mirror, then the same queue
+    // arrives again: the second resolve must come from the item cache.
+    container.read(docProvider.notifier).state = null;
+    container.read(docProvider.notifier).state = const SessionDoc(
+      itemIds: ['a', 'b'],
+      playing: true,
+    );
+
+    final again = await container.read(remoteQueueProvider.future);
+    expect([for (final song in again) song.id], ['a', 'b']);
+    verify(() => client.getItemsByIds(any())).called(1);
+  });
+
+  test('- refresh picks up user-data changes on the mirror queue', () async {
+    final docProvider = StateProvider<SessionDoc?>(
+      (_) => const SessionDoc(itemIds: ['a']),
+    );
+    final container = createProviderContainer(
+      overrides: [
+        mediaServerClientProvider.overrideWithValue(client),
+        remoteSessionProvider.overrideWith(
+          (ref) => _remote(ref.watch(docProvider) ?? const SessionDoc()),
+        ),
+      ],
+    );
+    when(() => client.getItemsByIds(['a'])).thenAnswer((_) async => [_song('a')]);
+    await container.read(remoteQueueProvider.future);
+
+    when(() => client.getItemsByIds(['a'])).thenAnswer((_) async => [
+      _song('a').copyWith(
+        userData: const PlaybackUserData(isFavorite: true),
+      ),
+    ]);
+    await container.read(remoteQueueProvider.notifier).refresh();
+
+    expect(
+      container.read(remoteQueueProvider).valueOrNull?.single.userData.isFavorite,
+      isTrue,
+    );
+    verify(() => client.getItemsByIds(['a'])).called(2);
+  });
+
   test('local progress carries what the player has buffered', () {
     final container = createProviderContainer(
       overrides: [
