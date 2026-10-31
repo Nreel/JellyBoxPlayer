@@ -46,18 +46,36 @@ class _SwipeableArtworkState extends ConsumerState<SwipeableArtwork> {
     _controller = PageController(initialPage: _page);
   }
 
+  /// Page the controller should land on once a dropped move settles.
+  int? _pendingMove;
+
   @override
   void didUpdateWidget(covariant SwipeableArtwork oldWidget) {
     super.didUpdateWidget(oldWidget);
     final target = _currentPage;
-    if (target == _page) return;
+    // The controller can fall behind while [_page] already tracks the target:
+    // a remote queue emptied and refilled (handoff round-trip) clamps the
+    // page back to 0, and a move scheduled while that empty queue was shown
+    // lands nowhere. Re-sync whenever the controller disagrees, not only
+    // when the target changed.
+    final actual = _controller.hasClients ? _controller.page?.round() : null;
+    if (target == _page && (actual == null || actual == target)) return;
     _page = target;
     WidgetsBinding.instance.addPostFrameCallback((_) => _moveTo(target));
   }
 
   void _moveTo(int target) {
     if (!mounted || !_controller.hasClients) return;
-    if (_controller.position.isScrollingNotifier.value) return;
+    // Nothing to jump across while the queue is empty; the refill rebuild
+    // re-syncs against the controller afterwards.
+    if (widget.queue.isEmpty) return;
+    if (_controller.position.isScrollingNotifier.value) {
+      // A gesture or settle animation in flight swallows the move. Retry it
+      // once scrolling ends, unless the user swiped to another page meanwhile.
+      _pendingMove = target;
+      _controller.position.isScrollingNotifier.addListener(_onScrollSettled);
+      return;
+    }
     final current = _controller.page?.round();
     if (current == target) return;
     if (current != null && (current - target).abs() == 1) {
@@ -71,6 +89,14 @@ class _SwipeableArtworkState extends ConsumerState<SwipeableArtwork> {
     } else {
       _controller.jumpToPage(target);
     }
+  }
+
+  void _onScrollSettled() {
+    if (_controller.position.isScrollingNotifier.value) return;
+    _controller.position.isScrollingNotifier.removeListener(_onScrollSettled);
+    final target = _pendingMove;
+    _pendingMove = null;
+    if (target != null && mounted && target == _page) _moveTo(target);
   }
 
   Future<void> _onPageChanged(int page) async {
@@ -93,6 +119,10 @@ class _SwipeableArtworkState extends ConsumerState<SwipeableArtwork> {
 
   @override
   void dispose() {
+    if (_pendingMove != null) {
+      _pendingMove = null;
+      _controller.position.isScrollingNotifier.removeListener(_onScrollSettled);
+    }
     _controller.dispose();
     super.dispose();
   }
