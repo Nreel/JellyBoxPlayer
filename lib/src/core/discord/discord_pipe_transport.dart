@@ -137,6 +137,7 @@ class _PipeTransport implements DiscordTransport {
 
   late final Timer _poll;
   var _closed = false;
+  var _answered = false;
 
   @override
   Stream<List<int>> get incoming => _incoming.stream;
@@ -189,6 +190,7 @@ class _PipeTransport implements DiscordTransport {
           }
           final count = read.value;
           if (count == 0) return;
+          _answered = true;
           _incoming.add(Uint8List.fromList(buffer.asTypedList(count)));
         } finally {
           calloc.free(buffer);
@@ -209,7 +211,10 @@ class _PipeTransport implements DiscordTransport {
     _poll.cancel();
     _release();
     if (!_incoming.isClosed) {
-      _incoming.addError(DiscordPipeException(reason));
+      // A client that answered once and then dropped the pipe (e.g. a
+      // rejected handshake) means the remote side is gone, not a transport
+      // fault: end the stream instead of erroring it.
+      if (!_answered) _incoming.addError(DiscordPipeException(reason));
       _incoming.close().ignore();
     }
   }
