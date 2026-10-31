@@ -55,6 +55,16 @@ void main() {
   late File songFile;
   late Directory tempDir;
 
+  // Windows cannot delete a directory whose database file is still open, so
+  // every database this file opens is registered here and closed in tearDown.
+  final opened = <DownloadDatabase>[];
+
+  DownloadDatabase openDb({String? serverId}) {
+    final db = DownloadDatabase(serverId: serverId ?? '');
+    opened.add(db);
+    return db;
+  }
+
   setUpAll(() async {
     final dbDir = await Directory.systemTemp.createTemp('download_db');
     await databaseFactory.setDatabasesPath(dbDir.path);
@@ -76,6 +86,10 @@ void main() {
 
   tearDown(() async {
     DownloadPaths.root = null;
+    for (final db in opened) {
+      await db.close();
+    }
+    opened.clear();
     await deleteDb();
     if (tempDir.existsSync()) await tempDir.delete(recursive: true);
   });
@@ -121,8 +135,8 @@ void main() {
 
   group('DownloadDatabase (server scoping)', () {
     test('- hides another server\'s downloads', () async {
-      final jellyfin = DownloadDatabase(serverId: 'server-a');
-      final emby = DownloadDatabase(serverId: 'server-b');
+      final jellyfin = openDb(serverId: 'server-a');
+      final emby = openDb(serverId: 'server-b');
       final song = buildSong();
 
       await jellyfin.insertDownloadedSong(song, file: songFile);
@@ -134,8 +148,8 @@ void main() {
     });
 
     test('- hides another server\'s albums', () async {
-      final jellyfin = DownloadDatabase(serverId: 'server-a');
-      final emby = DownloadDatabase(serverId: 'server-b');
+      final jellyfin = openDb(serverId: 'server-a');
+      final emby = openDb(serverId: 'server-b');
       final album = buildAlbum();
 
       await jellyfin.insertDownloadedAlbum(album, files: [songFile]);
@@ -146,8 +160,8 @@ void main() {
     });
 
     test('- reports downloaded ids for the current server only', () async {
-      final jellyfin = DownloadDatabase(serverId: 'server-a');
-      final emby = DownloadDatabase(serverId: 'server-b');
+      final jellyfin = openDb(serverId: 'server-a');
+      final emby = openDb(serverId: 'server-b');
       final song = buildSong();
 
       await jellyfin.insertDownloadedSong(song, file: songFile);
@@ -158,8 +172,8 @@ void main() {
     });
 
     test('- reports album ids from albums and songs alike', () async {
-      final jellyfin = DownloadDatabase(serverId: 'server-a');
-      final emby = DownloadDatabase(serverId: 'server-b');
+      final jellyfin = openDb(serverId: 'server-a');
+      final emby = openDb(serverId: 'server-b');
       final album = buildAlbum();
       final song = buildSong();
 
@@ -172,8 +186,8 @@ void main() {
     });
 
     test('- does not delete another server\'s rows', () async {
-      final jellyfin = DownloadDatabase(serverId: 'server-a');
-      final emby = DownloadDatabase(serverId: 'server-b');
+      final jellyfin = openDb(serverId: 'server-a');
+      final emby = openDb(serverId: 'server-b');
       final song = buildSong();
 
       await jellyfin.insertDownloadedSong(song, file: songFile);
@@ -183,14 +197,14 @@ void main() {
     });
 
     test('- adopts rows written before scoping existed', () async {
-      final legacy = DownloadDatabase();
+      final legacy = openDb();
       final song = buildSong();
       final album = buildAlbum();
 
       await legacy.insertDownloadedSong(song, file: songFile);
       await legacy.insertDownloadedAlbum(album, files: [songFile]);
 
-      final scoped = DownloadDatabase(serverId: 'server-a');
+      final scoped = openDb(serverId: 'server-a');
       expect(await scoped.getDownloadedSongs(), isEmpty);
 
       await scoped.adoptLegacyDownloads();
@@ -198,20 +212,20 @@ void main() {
       expect(await scoped.getDownloadedSongs(), hasLength(1));
       expect(await scoped.getDownloadedAlbums(), hasLength(1));
       expect(
-        await DownloadDatabase(serverId: 'server-b').getDownloadedSongs(),
+        await openDb(serverId: 'server-b').getDownloadedSongs(),
         isEmpty,
       );
     });
 
     test('- adoption is a no-op without a server id', () async {
-      final legacy = DownloadDatabase();
+      final legacy = openDb();
       await legacy.insertDownloadedSong(buildSong(), file: songFile);
 
       await legacy.adoptLegacyDownloads();
 
       expect(await legacy.getDownloadedSongs(), hasLength(1));
       expect(
-        await DownloadDatabase(serverId: 'server-a').getDownloadedSongs(),
+        await openDb(serverId: 'server-a').getDownloadedSongs(),
         isEmpty,
       );
     });
@@ -219,7 +233,7 @@ void main() {
 
   group('DownloadDatabase (fresh install)', () {
     test('- inserts and reads back a downloaded song', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final song = buildSong();
 
       await db.insertDownloadedSong(song, file: songFile);
@@ -232,7 +246,7 @@ void main() {
     });
 
     test('- filters downloaded songs by album id', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final albumId = faker.datatype.uuid();
       final matching = buildSong(albumId: albumId);
       final other = buildSong();
@@ -246,7 +260,7 @@ void main() {
     });
 
     test('- inserts and reads back a downloaded album', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final album = buildAlbum();
 
       await db.insertDownloadedAlbum(album, files: [songFile]);
@@ -258,7 +272,7 @@ void main() {
     });
 
     test('- reports whether a song or album is downloaded', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final song = buildSong();
       final album = buildAlbum();
 
@@ -273,7 +287,7 @@ void main() {
     });
 
     test('- deletes a downloaded song and its file', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final song = buildSong();
       await db.insertDownloadedSong(song, file: songFile);
 
@@ -284,7 +298,7 @@ void main() {
     });
 
     test('- deletes a downloaded album and its songs', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final album = buildAlbum();
       final song = buildSong(albumId: album.id);
       await db.insertDownloadedAlbum(album, files: [songFile]);
@@ -299,7 +313,7 @@ void main() {
 
   group('DownloadDatabase (playlists)', () {
     test('- inserts and reads back a downloaded playlist', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final playlist = buildPlaylist();
       final song = buildSong();
       final file = newSongFile();
@@ -319,7 +333,7 @@ void main() {
     });
 
     test('- returns playlist songs in playlist order', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final playlist = buildPlaylist();
       final first = buildSong();
       final second = buildSong();
@@ -341,7 +355,7 @@ void main() {
     test(
       '- re-downloading a playlist replaces its previous track list',
       () async {
-        final db = DownloadDatabase();
+        final db = openDb();
         final playlist = buildPlaylist();
         final removed = buildSong();
         final kept = buildSong();
@@ -365,7 +379,7 @@ void main() {
     );
 
     test('- deletes a playlist along with its songs and files', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final playlist = buildPlaylist();
       final song = buildSong();
       final file = newSongFile();
@@ -386,7 +400,7 @@ void main() {
     });
 
     test('- keeps songs another playlist still references', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final shared = buildSong();
       final file = newSongFile();
       final keeper = buildPlaylist();
@@ -412,7 +426,7 @@ void main() {
     });
 
     test('- keeps songs that belong to a downloaded album', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final album = buildAlbum();
       final song = buildSong(albumId: album.id);
       final file = newSongFile();
@@ -433,8 +447,8 @@ void main() {
     });
 
     test('- hides another server\'s playlists', () async {
-      final jellyfin = DownloadDatabase(serverId: 'server-a');
-      final emby = DownloadDatabase(serverId: 'server-b');
+      final jellyfin = openDb(serverId: 'server-a');
+      final emby = openDb(serverId: 'server-b');
       final playlist = buildPlaylist();
       final song = buildSong();
       final file = newSongFile();
@@ -455,7 +469,7 @@ void main() {
 
   group('DownloadDatabase (abandoned songs)', () {
     test('- prunes pending songs no collection ever saved', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final abandoned = buildSong();
       final standalone = buildSong();
       final abandonedFile = newSongFile();
@@ -474,7 +488,7 @@ void main() {
     });
 
     test('- saving an album settles its pending songs', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final album = buildAlbum();
       final song = buildSong(albumId: album.id);
       final file = newSongFile();
@@ -487,7 +501,7 @@ void main() {
     });
 
     test('- saving a playlist settles its pending songs', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final playlist = buildPlaylist();
       final song = buildSong();
       final file = newSongFile();
@@ -500,7 +514,7 @@ void main() {
     });
 
     test('- a pending song picked up by another collection is kept', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final playlist = buildPlaylist();
       final song = buildSong();
       final file = newSongFile();
@@ -516,7 +530,7 @@ void main() {
 
   group('DownloadDatabase (standalone songs)', () {
     test('- lists only songs no saved album or playlist holds', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final album = buildAlbum();
       final playlist = buildPlaylist();
       final albumSong = buildSong(albumId: album.id);
@@ -546,7 +560,7 @@ void main() {
     });
 
     test('- lists the most recently downloaded songs first', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final older = buildSong();
       final newer = buildSong();
       await db.insertDownloadedSong(older, file: newSongFile());
@@ -558,7 +572,7 @@ void main() {
     });
 
     test('- a song leaves the list once a playlist picks it up', () async {
-      final db = DownloadDatabase();
+      final db = openDb();
       final playlist = buildPlaylist();
       final song = buildSong();
       final file = newSongFile();
@@ -633,7 +647,7 @@ void main() {
         },
       );
 
-      final db = DownloadDatabase();
+      final db = openDb();
       final songs = await db.getDownloadedSongs();
       final albums = await db.getDownloadedAlbums();
 
@@ -705,7 +719,7 @@ void main() {
         },
       );
 
-      final db = DownloadDatabase();
+      final db = openDb();
       expect(await db.isSongDownloaded(songId), isTrue);
       expect(await db.isAlbumDownloaded(albumId), isTrue);
       expect(await db.getDownloadedSongPath(songId), legacyFile.path);
@@ -722,6 +736,10 @@ void main() {
 
     tearDown(() async {
       DownloadDatabase.databaseDirectory = null;
+      for (final db in opened) {
+        await db.close();
+      }
+      opened.clear();
       if (overrideDir.existsSync()) await overrideDir.delete(recursive: true);
     });
 
@@ -729,21 +747,21 @@ void main() {
       final target = join(overrideDir.path, 'nested');
       DownloadDatabase.databaseDirectory = target;
 
-      await DownloadDatabase().getDownloadedSongs();
+      await openDb().getDownloadedSongs();
 
       expect(File(join(target, 'downloads.db')).existsSync(), isTrue);
       expect(File(dbPath).existsSync(), isFalse);
     });
 
     test('- moves a database left at the legacy location', () async {
-      final legacy = DownloadDatabase(serverId: 'server-a');
+      final legacy = openDb(serverId: 'server-a');
       final song = buildSong();
       await legacy.insertDownloadedSong(song, file: songFile);
       await (await legacy.database).close();
       expect(File(dbPath).existsSync(), isTrue);
 
       DownloadDatabase.databaseDirectory = overrideDir.path;
-      final moved = DownloadDatabase(serverId: 'server-a');
+      final moved = openDb(serverId: 'server-a');
 
       expect(await moved.getDownloadedSongs(), hasLength(1));
       expect(File(join(overrideDir.path, 'downloads.db')).existsSync(), isTrue);
@@ -837,7 +855,7 @@ CREATE TABLE QueueCache (
         ],
       );
 
-      final db = DownloadDatabase(serverId: 'server-a');
+      final db = openDb(serverId: 'server-a');
 
       expect(await db.getDownloadedSongPath(song.id), moved.path);
       expect(await rawFilePath(db, song.id), 'album1/track.flac');
@@ -857,7 +875,7 @@ CREATE TABLE QueueCache (
         ],
       );
 
-      final db = DownloadDatabase(serverId: 'server-a');
+      final db = openDb(serverId: 'server-a');
 
       expect(
         await db.getDownloadedSongPath(song.id),
@@ -876,7 +894,7 @@ CREATE TABLE QueueCache (
         ],
       );
 
-      final db = DownloadDatabase(serverId: 'server-a');
+      final db = openDb(serverId: 'server-a');
 
       expect(await db.getDownloadedSongPath(shallow.id), isNull);
       expect(await rawFilePath(db, shallow.id), '/victim.flac');
@@ -904,7 +922,7 @@ CREATE TABLE QueueCache (
         ],
       );
 
-      final db = DownloadDatabase(serverId: 'server-a');
+      final db = openDb(serverId: 'server-a');
       final rows = await (await db.database).query(
         'QueueCache',
         columns: ['FilePath'],
@@ -918,7 +936,7 @@ CREATE TABLE QueueCache (
       final file = File(join(tempDir.path, 'album3', 'track.flac'))
         ..createSync(recursive: true)
         ..writeAsBytesSync(List.filled(16, 0));
-      final db = DownloadDatabase(serverId: 'server-a');
+      final db = openDb(serverId: 'server-a');
 
       await db.insertDownloadedSong(song, file: file);
 

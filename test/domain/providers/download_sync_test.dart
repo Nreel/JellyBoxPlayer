@@ -107,6 +107,7 @@ void main() {
   });
 
   tearDown(() async {
+    await database.close();
     if (filesDir.existsSync()) await filesDir.delete(recursive: true);
   });
 

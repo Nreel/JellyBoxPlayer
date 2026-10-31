@@ -30,6 +30,15 @@ class DownloadDatabase {
     return _db!;
   }
 
+  /// Releases the open connection; a later read reopens the database.
+  /// Needed to move or delete the storage directory, which Windows rejects
+  /// while a file inside it is still open.
+  Future<void> close() async {
+    final db = _db;
+    _db = null;
+    await db?.close();
+  }
+
   Future<Database> _initDB(String filePath) async {
     final override = databaseDirectory;
     final dbPath = override ?? await getDatabasesPath();

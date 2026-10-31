@@ -87,6 +87,7 @@ void main() {
 
   tearDown(() async {
     container.dispose();
+    await database.close();
     if (filesDir.existsSync()) await filesDir.delete(recursive: true);
   });
 
